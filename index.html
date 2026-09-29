@@ -302,8 +302,9 @@
 
     <div class="card-result">
       <div class="result-row total"><span>總製作成本：</span><span id="totalCost">0 楓幣</span></div>
-      <div class="result-row"><span>扣除 3% 交易稅後淨收：</span><span id="netIncome">0 楓幣</span></div>
-      <div class="result-row profit"><span>預期純利潤：</span><span id="profit">0 楓幣</span></div>
+      <div class="result-row"><span>扣除 3% 交易稅後淨收 (拍賣會員)：</span><span id="netIncome3pct">0 楓幣</span></div>
+      <div class="result-row"><span>扣除 5% 交易稅後淨收：</span><span id="netIncome5pct">0 楓幣</span></div>
+      <div class="result-row profit"><span>預期純利潤 (以 3% 計算)：</span><span id="profit">0 楓幣</span></div>
       <div id="profitAdvice" style="font-size: 13px; margin-top: 8px; font-weight: bold;"></div>
     </div>
   </div>
@@ -328,7 +329,7 @@
       <button class="btn-sm btn-primary" id="btnClearExpNumbers" style="background:#f0ad4e;">🧹 清空數字（保留尾巴與觸角）</button>
     </div>
 
-    <div class="section-title"><span>⏱️ 1. 測試時間區間</span></div>
+    <div class="section-title"><span>⏱️️ 1. 測試時間區間</span></div>
     <div class="exp-grid">
       <div class="exp-field" style="grid-column: 1 / -1;">
         <label>測試時間 (分鐘)：</label>
@@ -842,7 +843,8 @@ window.addEventListener('load', function() {
     const idx = select.value;
     if (idx === "" || !appData.products[idx]) {
       document.getElementById('totalCost').innerText = '0 楓幣';
-      document.getElementById('netIncome').innerText = '0 楓幣';
+      document.getElementById('netIncome3pct').innerText = '0 楓幣';
+      document.getElementById('netIncome5pct').innerText = '0 楓幣';
       document.getElementById('profit').innerText = '0 楓幣';
       return;
     }
@@ -857,11 +859,13 @@ window.addEventListener('load', function() {
     }
 
     const sellPrice = parseNumber(document.getElementById('inlineMarketPrice').value);
-    const netIncome = Math.floor(sellPrice * 0.97);
-    const profit = netIncome - totalCost;
+    const netIncome3 = Math.floor(sellPrice * 0.97);
+    const netIncome5 = Math.floor(sellPrice * 0.95);
+    const profit = netIncome3 - totalCost;
 
     document.getElementById('totalCost').innerText = formatNumber(totalCost) + ' 楓幣';
-    document.getElementById('netIncome').innerText = formatNumber(netIncome) + ' 楓幣';
+    document.getElementById('netIncome3pct').innerText = formatNumber(netIncome3) + ' 楓幣';
+    document.getElementById('netIncome5pct').innerText = formatNumber(netIncome5) + ' 楓幣';
     document.getElementById('profit').innerText = formatNumber(profit) + ' 楓幣';
 
     const profitEl = document.getElementById('profit');
