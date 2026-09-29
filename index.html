@@ -21,7 +21,7 @@
                 <h1 class="text-2xl font-bold flex items-center gap-2">
                     <i class="fa-solid fa-calculator text-amber-500"></i> 楓之谷成本計算機 <span class="text-xs bg-amber-500 text-slate-900 px-2 py-0.5 rounded font-mono">v4.9.3</span>
                 </h1>
-                <p class="text-slate-400 text-sm mt-1">已連接至 v4.9.3 雲端資料庫，資料即時同步[cite: 9]。</p>
+                <p class="text-slate-400 text-sm mt-1">已鎖定連接至 v493 雲端資料庫，資料即時同步。</p>
             </div>
             <div class="flex flex-wrap gap-2">
                 <button onclick="switchTab('calc')" id="btn-calc" class="px-4 py-2 bg-amber-600 text-white rounded-lg font-medium transition hover:bg-amber-700 shadow"><i class="fa-solid fa-bolt mr-1"></i> 快速選成品計算</button>
@@ -35,15 +35,16 @@
         <main class="p-6">
             <!-- 1. 計算分頁 -->
             <div id="tab-calc" class="space-y-6">
-                <div class="border-l-4 border-amber-600 pl-4 py-1">
-                    <h2 class="text-lg font-bold">1. 輸入基礎材料單價 (即時連動更新)</h2>
+                <div class="border-l-4 border-amber-600 pl-4 py-1 flex justify-between items-center">
+                    <h2 class="text-lg font-bold">1. 輸入基礎「母礦」或「打怪雜物」單價 (即時連動更新)</h2>
+                    <button onclick="savePrices()" class="px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white text-sm rounded-lg font-medium transition shadow-sm"><i class="fa-solid fa-floppy-disk mr-1"></i> 儲存單價</button>
                 </div>
                 <div id="raw-materials-container" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                    <!-- 動態載入材料 -->
+                    <!-- 動態載入母礦與材料 -->
                 </div>
 
                 <div class="border-l-4 border-amber-600 pl-4 py-1 mt-8">
-                    <h2 class="text-lg font-bold">2. 選擇欲製作的成品與測試市場價格</h2>
+                    <h2 class="text-lg font-bold">2. 選擇欲製作的成品 / 裝備 / 合成物與測試市場價格</h2>
                 </div>
                 <div class="bg-amber-50/50 border border-amber-200 rounded-xl p-6 space-y-4">
                     <div>
@@ -121,7 +122,7 @@
             const data = window.appData;
             if (!data) return;
 
-            // 渲染基礎材料
+            // 渲染基礎母礦與材料輸入框
             const rawContainer = document.getElementById('raw-materials-container');
             rawContainer.innerHTML = '';
             const materials = data.materials || data.rawMaterials || {};
@@ -130,21 +131,41 @@
                 const price = mat.price !== undefined ? mat.price : 0;
                 rawContainer.innerHTML += `
                     <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                        <span class="text-xs text-slate-400 block">${mat.category || '材料'}</span>
+                        <span class="text-xs text-slate-400 block">${mat.category || '母礦 / 材料'}</span>
                         <h3 class="font-bold text-slate-800">${name}</h3>
-                        <input type="text" value="${price.toLocaleString()}" class="w-full mt-2 p-2 border border-slate-300 rounded-lg font-mono font-bold text-slate-700 bg-slate-50" readonly>
+                        <input type="text" id="mat-price-${key}" value="${price.toLocaleString()}" class="w-full mt-2 p-2 border border-slate-300 rounded-lg font-mono font-bold text-slate-700 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-amber-500 focus:outline-none">
                     </div>
                 `;
             }
 
             // 渲染成品選單
             const productSelect = document.getElementById('calc-product-select');
-            productSelect.innerHTML = '<option value="">-- 請選擇成品 --</option>';
+            const currentSelected = productSelect.value;
+            productSelect.innerHTML = '<option value="">-- 請選擇成品 / 裝備 --</option>';
             const products = data.products || data.recipes || {};
             for (const [key, prod] of Object.entries(products)) {
                 const pName = prod.name || key;
                 productSelect.innerHTML += `<option value="${key}">${pName}</option>`;
             }
+            if (currentSelected) productSelect.value = currentSelected;
+            updateCalculation();
+        }
+
+        window.savePrices = function() {
+            if (!window.appData) return;
+            const materials = window.appData.materials || window.appData.rawMaterials || {};
+            for (const key of Object.keys(materials)) {
+                const inputElem = document.getElementById(`mat-price-${key}`);
+                if (inputElem) {
+                    const rawVal = Number(inputElem.value.replace(/,/g, '')) || 0;
+                    materials[key].price = rawVal;
+                }
+            }
+            set(dbRootRef, window.appData).then(() => {
+                alert('母礦與材料單價已成功同步至 v4.9.3 雲端！');
+            }).catch(err => {
+                alert('儲存失敗：' + err.message);
+            });
         }
 
         window.updateCalculation = function() {
@@ -159,7 +180,7 @@
             if (prod) {
                 panel.innerHTML = `
                     <h3 class="font-bold text-lg text-slate-800">${prod.name || selectedKey}</h3>
-                    <p class="text-sm text-slate-600">市場參考價：<span class="font-bold font-mono text-amber-600">${(prod.marketPrice || 0).toLocaleString()}</span> 楓幣</p>
+                    <p class="text-sm text-slate-600 mt-2">市場參考價：<span class="font-bold font-mono text-amber-600">${(prod.marketPrice || 0).toLocaleString()}</span> 楓幣</p>
                 `;
             }
         }
