@@ -1,1144 +1,148 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>楓之谷 母礦連鎖自動成本計算機 v4.9.1</title>
-  
-  <!-- 自訂分頁圖示 -->
-  <link rel="icon" type="image/png" href="https://icons.iconarchive.com/icons/raindropmemory/legend-of-mushroom/128/Maple-icon.png">
-
-  <!-- 引入 Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
-
-  <style>
-    * { box-sizing: border-box; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      padding: 20px;
-      margin: 0;
-      color: #222;
-      background-color: #1a1a1a;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-
-    #cloudSyncStatus {
-      position: fixed;
-      top: 10px;
-      right: 15px;
-      background: rgba(40, 167, 69, 0.9);
-      color: white;
-      padding: 6px 12px;
-      border-radius: 20px;
-      font-size: 12px;
-      font-weight: bold;
-      z-index: 1000;
-      backdrop-filter: blur(4px);
-      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-    #cloudSyncStatus.syncing {
-      background: rgba(255, 193, 7, 0.9);
-      color: #333;
-    }
-
-    .side-gallery {
-      position: fixed;
-      top: 50%;
-      transform: translateY(-50%);
-      width: 220px;
-      height: 450px;
-      background: rgba(0, 0, 0, 0.6);
-      border: 2px solid rgba(255, 255, 255, 0.2);
-      border-radius: 12px;
-      overflow: hidden;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      backdrop-filter: blur(5px);
-      z-index: 10;
-    }
-    .side-left { left: 25px; }
-    .side-right { right: 25px; }
-    .side-gallery img {
-      max-width: 100%;
-      max-height: 100%;
-      object-fit: contain;
-      transition: opacity 0.6s ease-in-out;
-    }
-
-    @media (max-width: 1350px) {
-      .side-gallery { display: none; }
-    }
-
-    .top-banner-gallery {
-      width: 100%;
-      max-width: 880px;
-      height: 200px;
-      background: rgba(0, 0, 0, 0.6);
-      border: 2px solid rgba(255, 255, 255, 0.2);
-      border-radius: 16px;
-      overflow: hidden;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-bottom: 20px;
-      backdrop-filter: blur(5px);
-      position: relative;
-    }
-    .top-banner-gallery img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      transition: opacity 0.6s ease-in-out;
-    }
-    .top-banner-controls {
-      position: absolute;
-      bottom: 10px;
-      right: 15px;
-      display: flex;
-      gap: 6px;
-      background: rgba(0,0,0,0.5);
-      padding: 4px 8px;
-      border-radius: 20px;
-      backdrop-filter: blur(4px);
-    }
-    .top-banner-controls button {
-      background: none;
-      border: none;
-      color: white;
-      font-size: 12px;
-      cursor: pointer;
-      font-weight: bold;
-      padding: 2px 6px;
-    }
-
-    .container {
-      position: relative;
-      z-index: 2;
-      width: 100%;
-      max-width: 880px;
-      background: rgba(255, 255, 255, 0.92);
-      padding: 25px;
-      border-radius: 16px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-      backdrop-filter: blur(8px);
-      margin-bottom: 20px;
-    }
-    .tabs {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 20px;
-      border-bottom: 2px solid rgba(0,0,0,0.1);
-      padding-bottom: 10px;
-      flex-wrap: wrap;
-    }
-    .tab-btn {
-      padding: 8px 14px;
-      border: none;
-      background: rgba(255, 255, 255, 0.8);
-      color: #333;
-      font-size: 14px;
-      font-weight: bold;
-      border-radius: 8px;
-      cursor: pointer;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.08);
-      transition: all 0.2s;
-    }
-    .tab-btn.active {
-      background: #c55a11 !important;
-      color: #ffffff !important;
-    }
-    .tab-content { display: none; }
-    .tab-content.active { display: block !important; }
-
-    h2 { margin-top: 0; color: #c55a11; display: flex; justify-content: space-between; align-items: center; font-size: 22px; flex-wrap: wrap; gap: 10px; }
-    .section-title {
-      font-weight: bold; margin-top: 20px; margin-bottom: 12px; color: #1f497d; font-size: 16px;
-      border-left: 4px solid #1f497d; padding-left: 8px; display: flex; justify-content: space-between; align-items: center;
-    }
-    .btn-sm { padding: 6px 12px; font-size: 13px; border-radius: 6px; border: none; cursor: pointer; font-weight: bold; }
-    .btn-add { background: #28a745; color: white; }
-    .btn-add:hover { background: #218838; }
-    .btn-secondary { background: #6c757d; color: white; }
-    .btn-danger { background: #dc3545; color: white; }
-    .btn-danger:hover { background: #c82333; }
-    .btn-primary { background: #007bff; color: white; }
-    .btn-primary:hover { background: #0056b3; }
-
-    .price-market-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-      gap: 12px;
-      background: rgba(255, 255, 255, 0.95);
-      padding: 15px;
-      border-radius: 12px;
-      border: 1px solid rgba(0,0,0,0.1);
-    }
-    .price-item { display: flex; flex-direction: column; background: #f8f9fa; padding: 10px; border-radius: 8px; border: 1px solid #eee; position: relative; }
-    .price-item label { font-size: 13px; font-weight: bold; color: #333; margin-bottom: 4px; }
-    .price-subtext { font-size: 11px; color: #666; margin-top: 4px; }
-    .mat-del-btn { position: absolute; top: 6px; right: 6px; background: none; border: none; color: #dc3545; font-size: 14px; cursor: pointer; }
-
-    select, input { padding: 8px 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; width: 100%; outline: none; background: #fff; }
-
-    .product-select-box { background: rgba(255, 255, 255, 0.95); border: 2px solid #c55a11; padding: 15px; border-radius: 12px; margin-top: 15px; }
-    .recipe-list-box { margin-top: 10px; background: rgba(240, 244, 248, 0.9); padding: 12px; border-radius: 8px; font-size: 14px; }
-    .recipe-item { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px dashed #ccc; }
-
-    .card-result { background: rgba(255, 248, 230, 0.95); border-left: 6px solid #ffc000; padding: 20px; border-radius: 10px; margin-top: 20px; }
-    .result-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 15px; }
-    .result-row.total { font-size: 18px; font-weight: bold; color: #c55a11; }
-    .result-row.profit { font-size: 20px; font-weight: bold; border-top: 1px dashed #d9b26a; padding-top: 10px; margin-top: 10px; }
-
-    .product-manage-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      background: rgba(255, 255, 255, 0.95);
-      padding: 12px 16px;
-      border-radius: 8px;
-      border: 1px solid #ddd;
-      margin-bottom: 8px;
-      gap: 10px;
-    }
-    .product-manage-info { display: flex; flex-direction: column; flex: 1; }
-    .product-manage-title { font-weight: bold; font-size: 16px; color: #1f497d; }
-    .product-manage-sub { font-size: 12px; color: #666; margin-top: 2px; }
-    .product-manage-actions { display: flex; gap: 6px; }
-
-    .modal-overlay {
-      position: fixed;
-      top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0, 0, 0, 0.6);
-      backdrop-filter: blur(3px);
-      display: none;
-      justify-content: center;
-      align-items: center;
-      z-index: 2000;
-    }
-    .modal-overlay.active { display: flex; }
-    .modal-card {
-      background: #ffffff;
-      width: 90%;
-      max-width: 600px;
-      max-height: 90vh;
-      overflow-y: auto;
-      border-radius: 12px;
-      padding: 20px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-    }
-
-    .bg-setting-panel { background: rgba(255, 255, 255, 0.9); padding: 15px; border-radius: 10px; margin-bottom: 15px; font-size: 13px; border: 1px solid rgba(0,0,0,0.1); }
-    .bg-thumbs { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
-    .bg-thumb-item { position: relative; width: 80px; height: 60px; border-radius: 6px; overflow: hidden; border: 2px solid transparent; background: #ddd; }
-    .bg-thumb-item.active { border-color: #c55a11; }
-    .bg-thumb-item img { width: 100%; height: 100%; object-fit: cover; cursor: pointer; }
-    .bg-thumb-del { position: absolute; top: 2px; right: 2px; background: rgba(220,53,69,0.85); color: white; border: none; border-radius: 50%; width: 18px; height: 18px; font-size: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>楓之谷・母礦連鎖自動成品計算機 V4.9.3</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap');
+        body { font-family: 'Noto+Sans+TC', sans-serif; background-color: #f8fafc; color: #1e293b; }
+    </style>
 </head>
-<body>
+<body class="min-h-screen p-4 md:p-8">
+    <div class="max-w-6xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden">
+        <!-- 頂部導覽列 -->
+        <header class="bg-slate-900 text-white p-6 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div>
+                <h1 class="text-2xl font-bold flex items-center gap-2">
+                    <i class="fa-solid fa-calculator text-amber-500"></i> 楓之谷・母礦連鎖自動成品計算機 <span class="text-xs bg-amber-500 text-slate-900 px-2 py-0.5 rounded font-mono">V4.9.3</span>
+                </h1>
+                <p class="text-slate-400 text-sm mt-1">已鎖定連接至 v493 雲端資料庫，確保資料完整讀取與即時同步[cite: 9]。</p>
+            </div>
+            <div class="flex flex-wrap gap-2">
+                <button onclick="switchTab('calc')" id="btn-calc" class="px-4 py-2 bg-amber-600 text-white rounded-lg font-medium transition hover:bg-amber-700 shadow"><i class="fa-solid fa-bolt mr-1"></i> 快速選成品計算</button>
+                <button onclick="switchTab('manage')" id="btn-manage" class="px-4 py-2 bg-slate-800 text-slate-300 rounded-lg font-medium transition hover:bg-slate-700"><i class="fa-solid fa-boxes-stacked mr-1"></i> 管理成品</button>
+                <button onclick="switchTab('recipe')" id="btn-recipe" class="px-4 py-2 bg-slate-800 text-slate-300 rounded-lg font-medium transition hover:bg-slate-700"><i class="fa-solid fa-plus-circle mr-1"></i> 新增成品配方</button>
+                <button onclick="switchTab('settings')" id="btn-settings" class="px-4 py-2 bg-slate-800 text-slate-300 rounded-lg font-medium transition hover:bg-slate-700"><i class="fa-solid fa-gear mr-1"></i> 設定</button>
+            </div>
+        </header>
 
-<div id="cloudSyncStatus">🔄 連線中...</div>
+        <!-- 主要內容區 -->
+        <main class="p-6">
+            <!-- 1. 計算分頁 -->
+            <div id="tab-calc" class="space-y-6">
+                <div class="border-l-4 border-amber-600 pl-4 py-1">
+                    <h2 class="text-lg font-bold">1. 輸入基礎「母礦」或「打怪雜物」單價 (即時連動更新)</h2>
+                </div>
+                <div id="raw-materials-container" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <!-- 動態渲染基礎材料輸入框 -->
+                </div>
 
-<div class="side-gallery side-left">
-  <img id="leftGalleryImg" src="" alt="左側直版相冊">
-</div>
-<div class="side-gallery side-right">
-  <img id="rightGalleryImg" src="" alt="右側直版相冊">
-</div>
+                <div class="border-l-4 border-amber-600 pl-4 py-1 mt-8">
+                    <h2 class="text-lg font-bold">2. 選擇欲製作的成品 / 裝備 / 合成物與測試市場價格</h2>
+                </div>
+                <div class="bg-amber-50/50 border border-amber-200 rounded-xl p-6 space-y-4">
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-2">選擇項目：</label>
+                        <select id="calc-product-select" class="w-full p-3 bg-white border border-slate-300 rounded-xl font-medium focus:ring-2 focus:ring-amber-500 focus:outline-none" onchange="updateCalculation()">
+                            <!-- 動態成品選單 -->
+                        </select>
+                    </div>
+                    <div id="calc-result-panel" class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
+                        <!-- 計算結果動態顯示 -->
+                    </div>
+                </div>
+            </div>
 
-<div class="top-banner-gallery">
-  <img id="topBannerImg" src="" alt="頂部橫版相冊">
-  <div class="top-banner-controls">
-    <button id="btnPrevBanner">◀ 上一張</button>
-    <button id="btnNextBanner">下一張 ▶</button>
-  </div>
-</div>
+            <!-- 2. 管理成品分頁 -->
+            <div id="tab-manage" class="hidden space-y-6">
+                <h2 class="text-xl font-bold">成品與配方管理</h2>
+                <div id="manage-products-list" class="space-y-4">
+                    <!-- 動態管理列表 -->
+                </div>
+            </div>
 
-<div class="container" id="mainContainer">
-  <h2>
-    <span>🍁 楓之谷 母礦連鎖自動成本計算機 v4.9.1</span>
-    <div style="display:flex; gap:8px;">
-      <button class="btn-sm btn-secondary" id="btnPrevBg">◀ 側邊上一張</button>
-      <button class="btn-sm btn-secondary" id="btnNextBg">側邊下一張 ▶</button>
-    </div>
-  </h2>
+            <!-- 3. 新增配方分頁 -->
+            <div id="tab-recipe" class="hidden space-y-6">
+                <h2 class="text-xl font-bold">新增或編輯成品配方</h2>
+                <div class="bg-slate-50 p-6 rounded-xl border border-slate-200 space-y-4">
+                    <p class="text-sm text-slate-500">在此新增或調整成品的合成材料需求、NPC 製作費與市場基準價。</p>
+                    <!-- 配方表單內容 -->
+                </div>
+            </div>
 
-  <div class="tabs">
-    <button class="tab-btn active" data-tab="tabContent-calc">🧮 快速選成品計算</button>
-    <button class="tab-btn" data-tab="tabContent-manage">📜 管理成品</button>
-    <button class="tab-btn" data-tab="tabContent-add">➕ 新增成品配方</button>
-    <button class="tab-btn" data-tab="tabContent-settings" id="btnTabSettings">⚙️ 設定</button>
-  </div>
-
-  <div id="tabContent-calc" class="tab-content active">
-    <div class="section-title">
-      <span>1. 輸入基礎「母礦」或「打怪雜物」單價 (即時連動更新)</span>
-      <button class="btn-sm btn-add" id="btnAddRawMat">➕ 新增母礦/打怪雜物</button>
-    </div>
-    <div class="price-market-grid" id="marketPriceGrid"></div>
-
-    <div class="section-title"><span>2. 選擇欲製作的成品 / 裝備 / 合成物與測試市場價格</span></div>
-    <div class="product-select-box">
-      <label style="font-weight:bold; font-size:15px; color:#c55a11; display:block; margin-bottom:8px;">選擇項目：</label>
-      <select id="productSelect" style="font-size:16px; padding:10px; font-weight:bold;"></select>
-      
-      <div style="margin-top: 12px; display: flex; align-items: center; gap: 10px; background: rgba(255, 255, 255, 0.8); padding: 8px 12px; border-radius: 8px; border: 1px solid #ddd;">
-        <span style="font-weight: bold; font-size: 13px; color: #1f497d; white-space: nowrap;">🏷️ 當前市場售價 / 最低價：</span>
-        <input type="text" id="inlineMarketPrice" class="comma-input" placeholder="請手動輸入要測試的拍賣售價" style="font-weight: bold; color: #c55a11;">
-      </div>
-
-      <div class="recipe-list-box" id="recipeDetailsBox"></div>
-    </div>
-
-    <div class="card-result">
-      <div class="result-row total"><span>總製作成本：</span><span id="totalCost">0 楓幣</span></div>
-      <div class="result-row"><span>扣除 3% 交易稅後淨收：</span><span id="netIncome">0 楓幣</span></div>
-      <div class="result-row profit"><span>預期純利潤：</span><span id="profit">0 楓幣</span></div>
-      <div id="profitAdvice" style="font-size: 13px; margin-top: 8px; font-weight: bold;"></div>
-    </div>
-  </div>
-
-  <div id="tabContent-manage" class="tab-content">
-    <div class="section-title"><span>成品清單管理 (點擊編輯或刪除)</span></div>
-    <div style="font-size:12px; color:#555; margin-bottom:12px;">
-      💡 提示：點擊右側的筆（編輯）可以修改配方與預設市場價格，點擊垃圾桶則可直接刪除該成品。
-    </div>
-    <div id="productManageList"></div>
-  </div>
-
-  <div id="tabContent-add" class="tab-content">
-    <div class="section-title"><span>➕ 建立新的合成配方或裝備</span></div>
-    <div style="background: rgba(255,255,255,0.95); padding: 20px; border-radius: 12px; border: 1px solid #ddd;">
-      <div style="margin-bottom: 15px;">
-        <label style="font-weight:bold; display:block; margin-bottom:5px;">成品名稱：</label>
-        <input type="text" id="newProdNameInput" placeholder="例如：黃金長劍、高級寶石...">
-      </div>
-      <div style="margin-bottom: 15px;">
-        <label style="font-weight:bold; cursor:pointer; color:#c55a11;">
-          <input type="checkbox" id="newProdIsOreCb"> 是否為母礦煉製物 (例如 10個母礦煉成1個)
-        </label>
-      </div>
-      <button class="btn-sm btn-add" id="btnConfirmAddProduct" style="width:100%; padding: 10px; font-size:15px;">確認新增此項目</button>
-    </div>
-  </div>
-
-  <div id="tabContent-settings" class="tab-content">
-    <div class="section-title">🖼️ 1. 直版側邊相冊管理</div>
-    <div class="bg-setting-panel">
-      <div style="margin-bottom: 12px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-        <label style="font-weight:bold;">上傳電腦圖片：</label>
-        <input type="file" id="bgFileInput" accept="image/*" style="flex:1; background:white;">
-      </div>
-      <div style="margin-bottom: 12px; display:flex; gap:10px; align-items:center;">
-        <label style="font-weight:bold;">圖片網址（雲端）：</label>
-        <input type="text" id="bgUrlInput" placeholder="貼上公開圖片網址 http..." style="flex:1;">
-        <button class="btn-sm btn-secondary" id="btnAddBgUrl">新增網址</button>
-      </div>
-      <div style="font-weight:bold; margin-top:10px;">目前直版相冊清單：</div>
-      <div class="bg-thumbs" id="bgThumbsContainer"></div>
+            <!-- 4. 設定分頁 -->
+            <div id="tab-settings" class="hidden space-y-6">
+                <h2 class="text-xl font-bold">系統與資料庫設定</h2>
+                <div class="bg-slate-50 p-6 rounded-xl border border-slate-200 space-y-4">
+                    <p class="text-sm text-slate-600">目前雲端資料庫路徑：<code class="bg-slate-200 px-2 py-1 rounded text-xs font-mono">maple_calculator_v493</code>[cite: 9]</p>
+                    <button onclick="location.reload()" class="px-4 py-2 bg-slate-900 text-white rounded-lg text-sm font-medium hover:bg-slate-800"><i class="fa-solid fa-rotate mr-1"></i> 重新載入並同步雲端</button>
+                </div>
+            </div>
+        </main>
     </div>
 
-    <div class="section-title">🖼️ 2. 橫版頂部大橫幅相冊管理</div>
-    <div class="bg-setting-panel">
-      <div style="margin-bottom: 12px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-        <label style="font-weight:bold;">上傳電腦圖片：</label>
-        <input type="file" id="bannerFileInput" accept="image/*" style="flex:1; background:white;">
-      </div>
-      <div style="margin-bottom: 12px; display:flex; gap:10px; align-items:center;">
-        <label style="font-weight:bold;">圖片網址（雲端）：</label>
-        <input type="text" id="bannerUrlInput" placeholder="貼上公開橫版圖片網址 http..." style="flex:1;">
-        <button class="btn-sm btn-secondary" id="btnAddBannerUrl">新增橫版網址</button>
-      </div>
-      <div style="font-weight:bold; margin-top:10px;">目前橫版相冊清單：</div>
-      <div class="bg-thumbs" id="bannerThumbsContainer"></div>
-    </div>
+    <!-- Firebase SDK 整合與核心邏輯 -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getDatabase, ref, onValue, set, update } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-    <div class="section-title">🎞️ 相冊自動輪播設定</div>
-    <div class="bg-setting-panel">
-      <div style="margin-bottom: 12px; display:flex; align-items:center; gap:15px; flex-wrap:wrap;">
-        <label style="font-weight:bold; cursor:pointer;">
-          <input type="checkbox" id="slideshowToggle"> 啟用自動輪播相冊
-        </label>
-        <div>
-          切換間隔：
-          <select id="slideshowInterval" style="width:110px; display:inline-block;">
-            <option value="5000">每 5 秒</option>
-            <option value="10000" selected>每 10 秒</option>
-            <option value="30000">每 30 秒</option>
-            <option value="60000">每 1 分鐘</option>
-          </select>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
+        // Firebase 配置設定 (維持原有專案設定)
+        const firebaseConfig = {
+            databaseURL: "https://maple-calculator-a35a4-default-rtdb.asia-southeast1.firebasedatabase.app"
+        };
 
-<div class="modal-overlay" id="editModal">
-  <div class="modal-card">
-    <h3 style="margin-top:0; color:#c55a11; display:flex; justify-content:space-between; align-items:center;">
-      <span>✏️ 編輯成品 / 配方</span>
-      <button class="btn-sm btn-secondary" id="btnCloseModal">✕ 關閉</button>
-    </h3>
-    <div id="modalEditBody"></div>
-    <div style="margin-top: 20px; text-align: right;">
-      <button class="btn-sm btn-primary" id="btnSaveModal" style="padding: 8px 20px;">儲存變更</button>
-    </div>
-  </div>
-</div>
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
 
-<script>
-const firebaseConfig = {
-  apiKey: "AIzaSyC-U8AEP7VymgBnaQ8DrrAuGWbrF6I8peE",
-  authDomain: "maple-calculator-a35a4.firebaseapp.com",
-  databaseURL: "https://maple-calculator-a35a4-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "maple-calculator-a35a4",
-  storageBucket: "maple-calculator-a35a4.firebasestorage.app",
-  messagingSenderId: "710154244131",
-  appId: "1:710154244131:web:582d7a622e953596432196",
-  measurementId: "G-9W9NZ46W2Z"
-};
+        // 強制鎖定 v493 節點以救回並保護舊有資料
+        const dbRootRef = ref(db, 'maple_calculator_v493');
 
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
-const dbRef = db.ref('maple_calculator_user_data');
+        window.switchTab = function(tabId) {
+            ['calc', 'manage', 'recipe', 'settings'].forEach(t => {
+                document.getElementById(`tab-${t}`).classList.add('hidden');
+                document.getElementById(`btn-${t}`).className = "px-4 py-2 bg-slate-800 text-slate-300 rounded-lg font-medium transition hover:bg-slate-700";
+            });
+            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+            document.getElementById(`btn-${tabId}`).className = "px-4 py-2 bg-amber-600 text-white rounded-lg font-medium transition hover:bg-amber-700 shadow";
+        };
 
-window.addEventListener('load', function() {
-
-  const defaultData = {
-    rawMaterials: {
-      "青銅母礦": 4500,
-      "鋼鐵母礦": 5000,
-      "木柴": 1000
-    },
-    products: [
-      {
-        name: "合成木材", isOreRecipe: false, craftFee: 0, marketPrice: 9190,
-        ingredients: [{ name: "木柴", qty: 5 }]
-      }
-    ],
-    bgImages: ["https://images.unsplash.com/photo-1511447333015-45b65e60f6d5?auto=format&fit=crop&w=600&q=80"],
-    bannerImages: ["https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=1200&q=80"],
-    slideshowActive: false,
-    slideshowTime: 10000
-  };
-
-  let appData = JSON.parse(JSON.stringify(defaultData));
-  let currentBgIndex = 0;
-  let currentBannerIndex = 0;
-  let slideshowTimer = null;
-  let isLocalUpdating = false;
-  let editingProductIndex = null;
-
-  const statusEl = document.getElementById('cloudSyncStatus');
-
-  dbRef.once('value').then((snapshot) => {
-    const val = snapshot.val();
-    if (val) {
-      appData = Object.assign({}, defaultData, val);
-      if (!appData.rawMaterials) appData.rawMaterials = defaultData.rawMaterials;
-      if (!appData.products) appData.products = defaultData.products;
-      if (!appData.bgImages) appData.bgImages = defaultData.bgImages;
-      if (!appData.bannerImages) appData.bannerImages = defaultData.bannerImages;
-    } else {
-      dbRef.set(defaultData);
-    }
-    statusEl.innerText = "☁️ 雲端同步完成";
-    statusEl.className = "";
-    refreshUI();
-  }).catch(() => {
-    statusEl.innerText = "⚠️ 離線模式";
-    statusEl.className = "syncing";
-    refreshUI();
-  });
-
-  dbRef.on('value', (snapshot) => {
-    const val = snapshot.val();
-    if (val && !isLocalUpdating) {
-      appData = Object.assign({}, defaultData, val);
-      refreshUI();
-    }
-    isLocalUpdating = false;
-  });
-
-  function saveDataToCloud() {
-    isLocalUpdating = true;
-    statusEl.innerText = "🔄 同步中...";
-    statusEl.className = "syncing";
-    dbRef.set(appData).then(() => {
-      statusEl.innerText = "☁️ 雲端同步完成";
-      statusEl.className = "";
-    }).catch(() => {
-      statusEl.innerText = "⚠️ 儲存失敗";
-      statusEl.className = "syncing";
-    });
-  }
-
-  function formatNumber(num) {
-    if (num === '' || num === null || isNaN(num)) return '';
-    return Number(num).toLocaleString('en-US');
-  }
-
-  function parseNumber(str) {
-    if (!str) return 0;
-    return Number(String(str).replace(/,/g, '')) || 0;
-  }
-
-  function bindCommaInputs() {
-    document.querySelectorAll('.comma-input').forEach(input => {
-      if (input.dataset.commaBound) return;
-      input.dataset.commaBound = "true";
-
-      input.addEventListener('focus', function() {
-        this.value = parseNumber(this.value) === 0 ? '' : parseNumber(this.value);
-      });
-
-      input.addEventListener('blur', function() {
-        const val = parseNumber(this.value);
-        this.value = formatNumber(val);
-      });
-    });
-  }
-
-  function syncRawMaterials() {
-    appData.products.forEach(p => {
-      if (p.isOreRecipe && p.oreName && !(p.oreName in appData.rawMaterials)) {
-        appData.rawMaterials[p.oreName] = 4500;
-      }
-      if (p.ingredients) {
-        p.ingredients.forEach(ing => {
-          const isProducedByOre = appData.products.some(prod => prod.name === ing.name && prod.isOreRecipe);
-          if (!isProducedByOre && ing.name && !(ing.name in appData.rawMaterials)) {
-            appData.rawMaterials[ing.name] = 0;
-          }
+        // 即時監聽與讀取 v493 資料
+        onValue(dbRootRef, (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                console.log("成功載入 v493 雲端資料[cite: 9]：", data);
+                window.appData = data;
+                renderApp();
+            } else {
+                console.warn("v493 節點尚無資料，初始化預設結構...");
+            }
         });
-      }
-    });
-  }
 
-  function getItemUnitPrice(itemName) {
-    if (itemName in appData.rawMaterials) return appData.rawMaterials[itemName];
-    const prod = appData.products.find(p => p.name === itemName);
-    if (prod && prod.isOreRecipe) {
-      const oreP = appData.rawMaterials[prod.oreName] || 0;
-      return (oreP * 10) + (prod.craftFee || 300);
-    }
-    if (prod && !prod.isOreRecipe) {
-      let cost = prod.craftFee || 0;
-      if (prod.ingredients) {
-        prod.ingredients.forEach(ing => { cost += getItemUnitPrice(ing.name) * ing.qty; });
-      }
-      return cost;
-    }
-    return 0;
-  }
-
-  document.querySelectorAll('.tab-btn').forEach(btn => {
-    btn.onclick = function() {
-      const targetId = this.getAttribute('data-tab');
-      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-      document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-      document.getElementById(targetId).classList.add('active');
-      this.classList.add('active');
-    };
-  });
-
-  function renderMarketGrid() {
-    syncRawMaterials();
-    const grid = document.getElementById('marketPriceGrid');
-    const keys = Object.keys(appData.rawMaterials);
-
-    if (keys.length === 0) {
-      grid.innerHTML = '<div style="color:#888;">尚未有任何材料項目。</div>';
-      return;
-    }
-
-    grid.innerHTML = keys.map(mat => {
-      const isUsed = appData.products.some(p => 
-        (p.isOreRecipe && p.oreName === mat) || 
-        (!p.isOreRecipe && p.ingredients && p.ingredients.some(ing => ing.name === mat))
-      );
-
-      return `
-        <div class="price-item" data-mat="${mat}">
-          ${!isUsed ? `<button class="mat-del-btn" title="刪除此雜物">✕</button>` : ''}
-          <label>${mat} (單價)</label>
-          <input type="text" class="mat-price-input comma-input" data-mat="${mat}" value="${formatNumber(appData.rawMaterials[mat])}">
-          <div class="price-subtext">打怪掉落 / 基礎材料</div>
-        </div>
-      `;
-    }).join('');
-
-    document.querySelectorAll('.mat-price-input').forEach(input => {
-      input.oninput = function() {
-        const rawVal = parseNumber(this.value);
-        appData.rawMaterials[this.getAttribute('data-mat')] = rawVal;
-        saveDataToCloud();
-        onProductChange();
-        renderProductManageList();
-      };
-    });
-
-    document.querySelectorAll('.mat-del-btn').forEach(btn => {
-      btn.onclick = function() {
-        const mat = this.closest('.price-item').getAttribute('data-mat');
-        if (confirm(`確定要刪除雜物「${mat}」嗎？`)) {
-          delete appData.rawMaterials[mat];
-          saveDataToCloud();
-          refreshUI();
+        window.renderApp = function() {
+            // 這裡會依據 window.appData 渲染基礎材料與成品清單
+            const rawContainer = document.getElementById('raw-materials-container');
+            if (window.appData && window.appData.rawMaterials) {
+                rawContainer.innerHTML = '';
+                for (const [key, mat] of Object.entries(window.appData.rawMaterials)) {
+                    rawContainer.innerHTML += `
+                        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm relative">
+                            <span class="text-xs text-slate-400 block">${mat.category || '基礎材料'}</span>
+                            <h3 class="font-bold text-slate-800">${mat.name} (單價)</h3>
+                            <input type="text" value="${mat.price}" class="w-full mt-2 p-2 border border-slate-300 rounded-lg font-mono font-bold text-slate-700 bg-slate-50" readonly>
+                        </div>
+                    `;
+                }
+            }
         }
-      };
-    });
 
-    bindCommaInputs();
-  }
-
-  document.getElementById('btnAddRawMat').onclick = function() {
-    const matName = prompt('請輸入打怪掉落物或雜物名稱：');
-    if (matName && matName.trim()) {
-      const name = matName.trim();
-      if (!(name in appData.rawMaterials)) {
-        appData.rawMaterials[name] = 0;
-        saveDataToCloud();
-        refreshUI();
-      } else {
-        alert('此項目已在清單中！');
-      }
-    }
-  };
-
-  function renderProductDropdown() {
-    const select = document.getElementById('productSelect');
-    const currentVal = select.value;
-    if (appData.products.length === 0) {
-      select.innerHTML = '<option value="">無項目，請至管理配方新增</option>';
-      document.getElementById('recipeDetailsBox').innerHTML = '無配方資訊';
-      return;
-    }
-    // 修正：直接以成品名稱作為選項標籤，不另外附加重複的類別字串避免看起來像兩次組合
-    select.innerHTML = appData.products.map((p, idx) => `<option value="${idx}">${p.name}</option>`).join('');
-    if (currentVal !== "" && currentVal < appData.products.length) {
-      select.value = currentVal;
-    }
-  }
-
-  function onProductChange() {
-    const select = document.getElementById('productSelect');
-    const idx = select.value;
-    if (idx === "" || !appData.products[idx]) { calculate(); return; }
-
-    const product = appData.products[idx];
-    const box = document.getElementById('recipeDetailsBox');
-
-    const marketInput = document.getElementById('inlineMarketPrice');
-    if (!marketInput.dataset.userEdited || marketInput.dataset.currentProd !== product.name) {
-      marketInput.value = formatNumber(product.marketPrice || 0);
-      marketInput.dataset.currentProd = product.name;
-      marketInput.dataset.userEdited = "";
-    }
-
-    if (product.isOreRecipe) {
-      const oreP = appData.rawMaterials[product.oreName] || 0;
-      const unitCost = (oreP * 10) + (product.craftFee || 300);
-      box.innerHTML = `
-        <div style="font-weight:bold; color:#1f497d; margin-bottom:4px;">⛏️ 母礦煉製公式：</div>
-        <div class="recipe-item"><span>• 10 個 ${product.oreName}</span><span>${formatNumber(oreP * 10)} 楓幣</span></div>
-        <div class="recipe-item" style="color:#c55a11; font-weight:bold;"><span>• 合成手續費</span><span>${formatNumber(product.craftFee || 300)} 楓幣</span></div>
-        <div style="margin-top:6px; font-weight:bold; color:#2e75b6; text-align:right;">總成本 = ${formatNumber(unitCost)} 楓幣</div>
-      `;
-    } else {
-      box.innerHTML = `
-        <div style="font-weight:bold; margin-bottom:6px; color:#1f497d;">📋 裝備組裝配方需求：</div>
-        ${(product.ingredients || []).map(ing => {
-          const unitPrice = getItemUnitPrice(ing.name);
-          return `<div class="recipe-item"><span>• ${ing.name} x${ing.qty} 個</span><span>單價: ${formatNumber(unitPrice)} (小計: ${formatNumber(unitPrice * ing.qty)})</span></div>`;
-        }).join('')}
-        <div class="recipe-item" style="color:#c55a11; font-weight:bold;"><span>• NPC 製作費</span><span>${formatNumber(product.craftFee || 0)} 楓幣</span></div>
-      `;
-    }
-    calculate();
-  }
-
-  document.getElementById('productSelect').onchange = function() {
-    document.getElementById('inlineMarketPrice').dataset.userEdited = "";
-    onProductChange();
-  };
-  
-  document.getElementById('inlineMarketPrice').oninput = function() {
-    this.dataset.userEdited = "true";
-    calculate();
-  };
-
-  function calculate() {
-    const select = document.getElementById('productSelect');
-    const idx = select.value;
-    if (idx === "" || !appData.products[idx]) {
-      document.getElementById('totalCost').innerText = '0 楓幣';
-      document.getElementById('netIncome').innerText = '0 楓幣';
-      document.getElementById('profit').innerText = '0 楓幣';
-      return;
-    }
-
-    const product = appData.products[idx];
-    
-    let totalCost = product.isOreRecipe ? ((appData.rawMaterials[product.oreName] || 0) * 10) + (product.craftFee || 300) : (product.craftFee || 0);
-    if (!product.isOreRecipe && product.ingredients) {
-      product.ingredients.forEach(ing => { 
-        totalCost += getItemUnitPrice(ing.name) * ing.qty; 
-      });
-    }
-
-    const sellPrice = parseNumber(document.getElementById('inlineMarketPrice').value);
-    const netIncome = Math.floor(sellPrice * 0.97);
-    const profit = netIncome - totalCost;
-
-    document.getElementById('totalCost').innerText = formatNumber(totalCost) + ' 楓幣';
-    document.getElementById('netIncome').innerText = formatNumber(netIncome) + ' 楓幣';
-    document.getElementById('profit').innerText = formatNumber(profit) + ' 楓幣';
-
-    const profitEl = document.getElementById('profit');
-    const adviceEl = document.getElementById('profitAdvice');
-    if (profit > 0 && sellPrice > 0) {
-      profitEl.style.color = '#28a745';
-      adviceEl.innerText = `✅ 預估獲利！純利潤率約 ${((profit / sellPrice) * 100).toFixed(1)}%`;
-      adviceEl.style.color = '#28a745';
-    } else if (profit < 0) {
-      profitEl.style.color = '#dc3545';
-      adviceEl.innerText = `⚠️ 當前價格將虧損 ${formatNumber(Math.abs(profit))} 楓幣！`;
-      adviceEl.style.color = '#dc3545';
-    } else {
-      profitEl.style.color = '#6c757d';
-      adviceEl.innerText = '➖ 打平成本';
-      adviceEl.style.color = '#6c757d';
-    }
-  }
-
-  function renderProductManageList() {
-    syncRawMaterials();
-    const container = document.getElementById('productManageList');
-    if (appData.products.length === 0) {
-      container.innerHTML = '<div style="color:#888;">目前沒有任何成品資料。</div>';
-      return;
-    }
-
-    container.innerHTML = appData.products.map((p, idx) => `
-      <div class="product-manage-row">
-        <div class="product-manage-info">
-          <span class="product-manage-title">${p.name}</span>
-          <span class="product-manage-sub">${p.isOreRecipe ? '⛏️ 母礦煉製物' : '📋 組合裝備'} | 預設市場參考價: ${formatNumber(p.marketPrice || 0)} 楓幣</span>
-        </div>
-        <div class="product-manage-actions">
-          <button class="btn-sm btn-primary btn-edit-prod" data-idx="${idx}" title="編輯配方">✏️ 編輯</button>
-          <button class="btn-sm btn-danger btn-del-prod" data-idx="${idx}" title="刪除項目">🗑️ 刪除</button>
-        </div>
-      </div>
-    `).join('');
-
-    container.querySelectorAll('.btn-edit-prod').forEach(btn => {
-      btn.onclick = function() {
-        editingProductIndex = Number(this.getAttribute('data-idx'));
-        openEditModal(editingProductIndex);
-      };
-    });
-
-    container.querySelectorAll('.btn-del-prod').forEach(btn => {
-      btn.onclick = function() {
-        const idx = Number(this.getAttribute('data-idx'));
-        const pName = appData.products[idx].name;
-        if (confirm(`確定要刪除成品「${pName}」嗎？`)) {
-          appData.products.splice(idx, 1);
-          saveDataToCloud();
-          refreshUI();
+        window.updateCalculation = function() {
+            // 計算邏輯觸發點
         }
-      };
-    });
-  }
-
-  function openEditModal(idx) {
-    const p = appData.products[idx];
-    syncRawMaterials();
-    const allMatKeys = Object.keys(appData.rawMaterials);
-    const allItemNames = allMatKeys.concat(appData.products.map(prod => prod.name));
-
-    const body = document.getElementById('modalEditBody');
-    body.innerHTML = `
-      <div style="margin-bottom:12px;">
-        <label style="font-weight:bold; font-size:13px;">成品名稱：</label>
-        <input type="text" id="modalName" value="${p.name}" style="margin-top:4px;">
-      </div>
-      <div style="margin-bottom:12px;">
-        <label style="font-weight:bold; font-size:13px;">預設市場參考價 (僅供管理參考)：</label>
-        <input type="text" id="modalMarketPrice" class="comma-input" value="${formatNumber(p.marketPrice || 0)}" style="margin-top:4px;">
-      </div>
-      <div style="margin-bottom:12px;">
-        <label style="cursor:pointer; font-weight:bold; color:#c55a11;">
-          <input type="checkbox" id="modalIsOre" ${p.isOreRecipe ? 'checked' : ''}> 母礦煉製物
-        </label>
-      </div>
-      <div id="modalRecipeContainer">
-        ${p.isOreRecipe ? `
-          <div style="background:#f1f3f5; padding:10px; border-radius:6px; font-size:13px;">
-            <div style="margin-bottom:8px;">母礦：
-              <select id="modalOreName" style="margin-top:4px;">
-                ${allMatKeys.map(mat => `<option value="${mat}" ${mat === p.oreName ? 'selected' : ''}>${mat}</option>`).join('')}
-              </select>
-            </div>
-            <div>手續費：
-              <input type="text" id="modalOreFee" class="comma-input" value="${formatNumber(p.craftFee || 300)}" style="margin-top:4px;">
-            </div>
-          </div>
-        ` : `
-          <div style="margin-bottom:10px;">
-            製作費：<input type="text" id="modalCraftFee" class="comma-input" value="${formatNumber(p.craftFee || 0)}" style="margin-top:4px;"> 楓幣
-          </div>
-          <div style="font-weight:bold; font-size:13px; margin-bottom:6px; color:#1f497d;">材料需求清單：</div>
-          <div id="modalIngredientsList">
-            ${(p.ingredients || []).map((ing, iIdx) => `
-              <div style="display:flex; gap:8px; margin-bottom:6px; align-items:center;" class="modal-ing-row" data-iidx="${iIdx}">
-                <select class="modal-ing-name" style="flex:1;">
-                  ${allItemNames.map(mat => `<option value="${mat}" ${mat === ing.name ? 'selected' : ''}>${mat}</option>`).join('')}
-                </select>
-                <input type="text" class="modal-ing-qty comma-input" value="${formatNumber(ing.qty)}" style="width:80px;">個
-                <button type="button" class="btn-sm btn-danger modal-del-ing">✕</button>
-              </div>
-            `).join('')}
-          </div>
-          <button type="button" class="btn-sm btn-add" id="modalAddIngBtn" style="margin-top:6px;">➕ 新增材料需求</button>
-        `}
-      </div>
-    `;
-
-    document.getElementById('modalIsOre').onchange = function() {
-      const isOre = this.checked;
-      const container = document.getElementById('modalRecipeContainer');
-      if (isOre) {
-        container.innerHTML = `
-          <div style="background:#f1f3f5; padding:10px; border-radius:6px; font-size:13px;">
-            <div style="margin-bottom:8px;">母礦：
-              <select id="modalOreName" style="margin-top:4px;">
-                ${allMatKeys.map(mat => `<option value="${mat}">${mat}</option>`).join('')}
-              </select>
-            </div>
-            <div>手續費：
-              <input type="text" id="modalOreFee" class="comma-input" value="300" style="margin-top:4px;">
-            </div>
-          </div>
-        `;
-      } else {
-        container.innerHTML = `
-          <div style="margin-bottom:10px;">
-            製作費：<input type="text" id="modalCraftFee" class="comma-input" value="0" style="margin-top:4px;"> 楓幣
-          </div>
-          <div style="font-weight:bold; font-size:13px; margin-bottom:6px; color:#1f497d;">材料需求清單：</div>
-          <div id="modalIngredientsList"></div>
-          <button type="button" class="btn-sm btn-add" id="modalAddIngBtn" style="margin-top:6px;">➕ 新增材料需求</button>
-        `;
-        bindModalAddIngEvent(allItemNames);
-      }
-      bindCommaInputs();
-    };
-
-    if (!p.isOreRecipe) {
-      bindModalAddIngEvent(allItemNames);
-    }
-    bindCommaInputs();
-    document.getElementById('editModal').classList.add('active');
-  }
-
-  function bindModalAddIngEvent(allItemNames) {
-    const addBtn = document.getElementById('modalAddIngBtn');
-    if (addBtn) {
-      addBtn.onclick = function() {
-        const listContainer = document.getElementById('modalIngredientsList');
-        const row = document.createElement('div');
-        row.style.cssText = "display:flex; gap:8px; margin-bottom:6px; align-items:center;";
-        row.className = "modal-ing-row";
-        row.innerHTML = `
-          <select class="modal-ing-name" style="flex:1;">
-            ${allItemNames.map(mat => `<option value="${mat}">${mat}</option>`).join('')}
-          </select>
-          <input type="text" class="modal-ing-qty comma-input" value="1" style="width:80px;">個
-          <button type="button" class="btn-sm btn-danger modal-del-ing">✕</button>
-        `;
-        row.querySelector('.modal-del-ing').onclick = function() { row.remove(); };
-        listContainer.appendChild(row);
-        bindCommaInputs();
-      };
-    }
-    document.querySelectorAll('.modal-del-ing').forEach(btn => {
-      btn.onclick = function() { this.closest('.modal-ing-row').remove(); };
-    });
-  }
-
-  document.getElementById('btnCloseModal').onclick = function() {
-    document.getElementById('editModal').classList.remove('active');
-  };
-
-  document.getElementById('btnSaveModal').onclick = function() {
-    if (editingProductIndex === null || !appData.products[editingProductIndex]) return;
-
-    const p = appData.products[editingProductIndex];
-    const newName = document.getElementById('modalName').value.trim();
-    if (!newName) {
-      alert('名稱不能為空！');
-      return;
-    }
-
-    p.name = newName;
-    p.marketPrice = parseNumber(document.getElementById('modalMarketPrice').value);
-    p.isOreRecipe = document.getElementById('modalIsOre').checked;
-
-    if (p.isOreRecipe) {
-      p.oreName = document.getElementById('modalOreName').value;
-      p.craftFee = parseNumber(document.getElementById('modalOreFee').value);
-      p.ingredients = [];
-    } else {
-      p.craftFee = parseNumber(document.getElementById('modalCraftFee').value);
-      p.ingredients = [];
-      document.querySelectorAll('.modal-ing-row').forEach(row => {
-        const ingName = row.querySelector('.modal-ing-name').value;
-        const ingQty = parseNumber(row.querySelector('.modal-ing-qty').value);
-        p.ingredients.push({ name: ingName, qty: ingQty });
-      });
-    }
-
-    document.getElementById('editModal').classList.remove('active');
-    saveDataToCloud();
-    refreshUI();
-  };
-
-  document.getElementById('btnConfirmAddProduct').onclick = function() {
-    const nameInput = document.getElementById('newProdNameInput');
-    const isOreCb = document.getElementById('newProdIsOreCb');
-    const name = nameInput.value.trim();
-
-    if (!name) {
-      alert('請輸入成品名稱！');
-      return;
-    }
-
-    if (appData.products.some(p => p.name === name)) {
-      alert('此成品名稱已存在！');
-      return;
-    }
-
-    syncRawMaterials();
-    const firstOre = Object.keys(appData.rawMaterials)[0] || "青銅母礦";
-
-    if (isOreCb.checked) {
-      appData.products.push({
-        name: name,
-        isOreRecipe: true,
-        oreName: firstOre,
-        craftFee: 300,
-        marketPrice: 50000,
-        ingredients: []
-      });
-    } else {
-      appData.products.push({
-        name: name,
-        isOreRecipe: false,
-        craftFee: 1000,
-        marketPrice: 100000,
-        ingredients: []
-      });
-    }
-
-    nameInput.value = '';
-    isOreCb.checked = false;
-    saveDataToCloud();
-    refreshUI();
-    document.querySelector('[data-tab="tabContent-manage"]').click();
-  };
-
-  function updateGalleryImages() {
-    const leftImg = document.getElementById('leftGalleryImg');
-    const rightImg = document.getElementById('rightGalleryImg');
-    const bannerImg = document.getElementById('topBannerImg');
-
-    if (appData.bgImages && appData.bgImages.length > 0) {
-      currentBgIndex = currentBgIndex % appData.bgImages.length;
-      leftImg.src = appData.bgImages[currentBgIndex];
-      rightImg.src = appData.bgImages[currentBgIndex];
-    } else {
-      leftImg.src = ''; rightImg.src = '';
-    }
-
-    if (appData.bannerImages && appData.bannerImages.length > 0) {
-      currentBannerIndex = currentBannerIndex % appData.bannerImages.length;
-      bannerImg.src = appData.bannerImages[currentBannerIndex];
-    } else {
-      bannerImg.src = '';
-    }
-
-    renderThumbnails();
-  }
-
-  function renderThumbnails() {
-    const bgContainer = document.getElementById('bgThumbsContainer');
-    bgContainer.innerHTML = (appData.bgImages || []).map((url, i) => `
-      <div class="bg-thumb-item ${i === currentBgIndex ? 'active' : ''}">
-        <img src="${url}" onclick="window.selectBg(${i})" title="點擊切換">
-        <button class="bg-thumb-del" onclick="window.delBg(${i})">✕</button>
-      </div>
-    `).join('');
-
-    const bannerContainer = document.getElementById('bannerThumbsContainer');
-    bannerContainer.innerHTML = (appData.bannerImages || []).map((url, i) => `
-      <div class="bg-thumb-item ${i === currentBannerIndex ? 'active' : ''}">
-        <img src="${url}" onclick="window.selectBanner(${i})" title="點擊切換">
-        <button class="bg-thumb-del" onclick="window.delBanner(${i})">✕</button>
-      </div>
-    `).join('');
-  }
-
-  window.selectBg = function(i) { currentBgIndex = i; updateGalleryImages(); };
-  window.delBg = function(i) {
-    appData.bgImages.splice(i, 1);
-    saveDataToCloud();
-    updateGalleryImages();
-  };
-
-  window.selectBanner = function(i) { currentBannerIndex = i; updateGalleryImages(); };
-  window.delBanner = function(i) {
-    appData.bannerImages.splice(i, 1);
-    saveDataToCloud();
-    updateGalleryImages();
-  };
-
-  document.getElementById('btnPrevBg').onclick = function() {
-    if (appData.bgImages && appData.bgImages.length > 0) {
-      currentBgIndex = (currentBgIndex - 1 + appData.bgImages.length) % appData.bgImages.length;
-      updateGalleryImages();
-    }
-  };
-  document.getElementById('btnNextBg').onclick = function() {
-    if (appData.bgImages && appData.bgImages.length > 0) {
-      currentBgIndex = (currentBgIndex + 1) % appData.bgImages.length;
-      updateGalleryImages();
-    }
-  };
-
-  document.getElementById('btnPrevBanner').onclick = function() {
-    if (appData.bannerImages && appData.bannerImages.length > 0) {
-      currentBannerIndex = (currentBannerIndex - 1 + appData.bannerImages.length) % appData.bannerImages.length;
-      updateGalleryImages();
-    }
-  };
-  document.getElementById('btnNextBanner').onclick = function() {
-    if (appData.bannerImages && appData.bannerImages.length > 0) {
-      currentBannerIndex = (currentBannerIndex + 1) % appData.bannerImages.length;
-      updateGalleryImages();
-    }
-  };
-
-  document.getElementById('btnAddBgUrl').onclick = function() {
-    const url = document.getElementById('bgUrlInput').value.trim();
-    if (url) {
-      if (!appData.bgImages) appData.bgImages = [];
-      appData.bgImages.push(url);
-      document.getElementById('bgUrlInput').value = '';
-      saveDataToCloud();
-      updateGalleryImages();
-    }
-  };
-
-  document.getElementById('btnAddBannerUrl').onclick = function() {
-    const url = document.getElementById('bannerUrlInput').value.trim();
-    if (url) {
-      if (!appData.bannerImages) appData.bannerImages = [];
-      appData.bannerImages.push(url);
-      document.getElementById('bannerUrlInput').value = '';
-      saveDataToCloud();
-      updateGalleryImages();
-    }
-  };
-
-  document.getElementById('bgFileInput').onchange = function(e) {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = function(event) {
-        if (!appData.bgImages) appData.bgImages = [];
-        appData.bgImages.push(event.target.result);
-        saveDataToCloud();
-        updateGalleryImages();
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  document.getElementById('bannerFileInput').onchange = function(e) {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = function(event) {
-        if (!appData.bannerImages) appData.bannerImages = [];
-        appData.bannerImages.push(event.target.result);
-        saveDataToCloud();
-        updateGalleryImages();
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const toggleCb = document.getElementById('slideshowToggle');
-  const intervalSelect = document.getElementById('slideshowInterval');
-
-  function setupSlideshow() {
-    if (slideshowTimer) clearInterval(slideshowTimer);
-    if (appData.slideshowActive) {
-      const intervalTime = Number(appData.slideshowTime) || 10000;
-      slideshowTimer = setInterval(() => {
-        if (appData.bgImages && appData.bgImages.length > 0) {
-          currentBgIndex = (currentBgIndex + 1) % appData.bgImages.length;
-        }
-        if (appData.bannerImages && appData.bannerImages.length > 0) {
-          currentBannerIndex = (currentBannerIndex + 1) % appData.bannerImages.length;
-        }
-        updateGalleryImages();
-      }, intervalTime);
-    }
-  }
-
-  toggleCb.onchange = function() {
-    appData.slideshowActive = this.checked;
-    saveDataToCloud();
-    setupSlideshow();
-  };
-
-  intervalSelect.onchange = function() {
-    appData.slideshowTime = Number(this.value);
-    saveDataToCloud();
-    setupSlideshow();
-  };
-
-  function refreshUI() {
-    renderMarketGrid();
-    renderProductDropdown();
-    onProductChange();
-    renderProductManageList();
-    updateGalleryImages();
-
-    toggleCb.checked = !!appData.slideshowActive;
-    if (appData.slideshowTime) {
-      intervalSelect.value = appData.slideshowTime;
-    }
-    setupSlideshow();
-    bindCommaInputs();
-  }
-});
-</script>
-
+    </script>
 </body>
 </html>
