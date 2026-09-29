@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>楓之谷 母礦連鎖自動成本計算機 v4.8.1 (雲端同步版)</title>
+  <title>楓之谷 母礦連鎖自動成本計算機 v4.9.0 (雲端同步版)</title>
   
   <!-- 引入 Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -136,17 +136,18 @@
     }
     .tabs {
       display: flex;
-      gap: 10px;
+      gap: 8px;
       margin-bottom: 20px;
       border-bottom: 2px solid rgba(0,0,0,0.1);
       padding-bottom: 10px;
+      flex-wrap: wrap;
     }
     .tab-btn {
-      padding: 10px 18px;
+      padding: 8px 14px;
       border: none;
       background: rgba(255, 255, 255, 0.8);
       color: #333;
-      font-size: 15px;
+      font-size: 14px;
       font-weight: bold;
       border-radius: 8px;
       cursor: pointer;
@@ -171,6 +172,8 @@
     .btn-secondary { background: #6c757d; color: white; }
     .btn-danger { background: #dc3545; color: white; }
     .btn-danger:hover { background: #c82333; }
+    .btn-primary { background: #007bff; color: white; }
+    .btn-primary:hover { background: #0056b3; }
 
     .price-market-grid {
       display: grid;
@@ -197,7 +200,61 @@
     .result-row.total { font-size: 18px; font-weight: bold; color: #c55a11; }
     .result-row.profit { font-size: 20px; font-weight: bold; border-top: 1px dashed #d9b26a; padding-top: 10px; margin-top: 10px; }
 
-    .recipe-card-edit { background: rgba(255, 255, 255, 0.95); border: 1px solid #ddd; padding: 15px; border-radius: 10px; margin-bottom: 12px; }
+    /* 成品管理列表排版 */
+    .product-manage-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(255, 255, 255, 0.95);
+      padding: 12px 16px;
+      border-radius: 8px;
+      border: 1px solid #ddd;
+      margin-bottom: 8px;
+      gap: 10px;
+    }
+    .product-manage-info {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+    }
+    .product-manage-title {
+      font-weight: bold;
+      font-size: 16px;
+      color: #1f497d;
+    }
+    .product-manage-sub {
+      font-size: 12px;
+      color: #666;
+      margin-top: 2px;
+    }
+    .product-manage-actions {
+      display: flex;
+      gap: 6px;
+    }
+
+    /* 彈出視窗 Modal 樣式 */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(3px);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 2000;
+    }
+    .modal-overlay.active { display: flex; }
+    .modal-card {
+      background: #ffffff;
+      width: 90%;
+      max-width: 600px;
+      max-height: 90vh;
+      overflow-y: auto;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+
     .bg-setting-panel { background: rgba(255, 255, 255, 0.9); padding: 15px; border-radius: 10px; margin-bottom: 15px; font-size: 13px; border: 1px solid rgba(0,0,0,0.1); }
     .bg-thumbs { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
     .bg-thumb-item { position: relative; width: 80px; height: 60px; border-radius: 6px; overflow: hidden; border: 2px solid transparent; background: #ddd; }
@@ -230,7 +287,7 @@
 
 <div class="container" id="mainContainer">
   <h2>
-    <span>🍁 楓之谷 母礦連鎖自動成本計算機 v4.8.1</span>
+    <span>🍁 楓之谷 母礦連鎖自動成本計算機 v4.9.0</span>
     <div style="display:flex; gap:8px;">
       <button class="btn-sm btn-secondary" id="btnPrevBg">◀ 側邊上一張</button>
       <button class="btn-sm btn-secondary" id="btnNextBg">側邊下一張 ▶</button>
@@ -239,10 +296,12 @@
 
   <div class="tabs">
     <button class="tab-btn active" data-tab="tabContent-calc">🧮 快速選成品計算</button>
-    <button class="tab-btn" data-tab="tabContent-recipe">📜 管理成品與合成配方</button>
+    <button class="tab-btn" data-tab="tabContent-manage">📜 管理成品</button>
+    <button class="tab-btn" data-tab="tabContent-add">➕ 新增成品配方</button>
     <button class="tab-btn" data-tab="tabContent-settings" id="btnTabSettings">⚙️ 設定</button>
   </div>
 
+  <!-- 分頁 1：快速計算 -->
   <div id="tabContent-calc" class="tab-content active">
     <div class="section-title">
       <span>1. 輸入基礎「母礦」或「打怪雜物」單價 (即時連動更新)</span>
@@ -271,17 +330,33 @@
     </div>
   </div>
 
-  <div id="tabContent-recipe" class="tab-content">
-    <div class="section-title">
-      <span>新增 / 編輯成品或中階合成物配方與市場參考價</span>
-      <button class="btn-sm btn-add" id="btnAddProduct">➕ 新增合成配方</button>
+  <!-- 分頁 2：純管理清單 (只列出成品、提供 ✏️ 與 🗑️) -->
+  <div id="tabContent-manage" class="tab-content">
+    <div class="section-title"><span>成品清單管理 (點擊編輯或刪除)</span></div>
+    <div style="font-size:12px; color:#555; margin-bottom:12px;">
+      💡 提示：點擊右側的筆（編輯）可以修改配方與市場價格，點擊垃圾桶則可直接刪除該成品。
     </div>
-    <div style="font-size:12px; color:#555; margin-bottom:10px;">
-      💡 <b>小提示：</b>修改原料價格會自動計算並連動更新相關成品的市場參考價，並同步至雲端！
-    </div>
-    <div id="productRecipeManageList"></div>
+    <div id="productManageList"></div>
   </div>
 
+  <!-- 分頁 3：獨立新增成品配方 -->
+  <div id="tabContent-add" class="tab-content">
+    <div class="section-title"><span>➕ 建立新的合成配方或裝備</span></div>
+    <div style="background: rgba(255,255,255,0.95); padding: 20px; border-radius: 12px; border: 1px solid #ddd;">
+      <div style="margin-bottom: 15px;">
+        <label style="font-weight:bold; display:block; margin-bottom:5px;">成品名稱：</label>
+        <input type="text" id="newProdNameInput" placeholder="例如：黃金長劍、高級寶石...">
+      </div>
+      <div style="margin-bottom: 15px;">
+        <label style="font-weight:bold; cursor:pointer; color:#c55a11;">
+          <input type="checkbox" id="newProdIsOreCb"> 是否為母礦煉製物 (例如 10個母礦煉成1個)
+        </label>
+      </div>
+      <button class="btn-sm btn-add" id="btnConfirmAddProduct" style="width:100%; padding: 10px; font-size:15px;">確認新增此項目</button>
+    </div>
+  </div>
+
+  <!-- 分頁 4：設定 -->
   <div id="tabContent-settings" class="tab-content">
     <div style="background:#fff3cd; padding:10px 15px; border-radius:8px; font-size:13px; margin-bottom:15px; border:1px solid #ffeeba; color:#856404; display:flex; justify-content:space-between; align-items:center;">
       <span>🔐 目前已通過管理員驗證</span>
@@ -338,6 +413,20 @@
   </div>
 </div>
 
+<!-- 編輯成品的彈出互動視窗 (Modal) -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal-card">
+    <h3 style="margin-top:0; color:#c55a11; display:flex; justify-content:space-between; align-items:center;">
+      <span>✏️ 編輯成品 / 配方</span>
+      <button class="btn-sm btn-secondary" id="btnCloseModal">✕ 關閉</button>
+    </h3>
+    <div id="modalEditBody"></div>
+    <div style="margin-top: 20px; text-align: right;">
+      <button class="btn-sm btn-primary" id="btnSaveModal" style="padding: 8px 20px;">儲存變更</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ==================== 🛠️ FIREBASE 雲端設定 ====================
 const firebaseConfig = {
@@ -353,13 +442,13 @@ const firebaseConfig = {
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
-const dbRef = db.ref('maple_calculator_v481');
+const dbRef = db.ref('maple_calculator_v490');
 
 window.addEventListener('load', function() {
 
   const ADMIN_USER = "NMIXX";
   const ADMIN_PASS = "0225";
-  let isAdminLoggedIn = sessionStorage.getItem('mp_admin_auth_v481') === 'true';
+  let isAdminLoggedIn = sessionStorage.getItem('mp_admin_auth_v490') === 'true';
 
   const defaultData = {
     rawMaterials: {
@@ -388,6 +477,7 @@ window.addEventListener('load', function() {
   let currentBannerIndex = 0;
   let slideshowTimer = null;
   let isLocalUpdating = false;
+  let editingProductIndex = null;
 
   const statusEl = document.getElementById('cloudSyncStatus');
 
@@ -461,7 +551,6 @@ window.addEventListener('load', function() {
     return 0;
   }
 
-  // 自動根據原料與配方計算成本並更新成品的市場參考價
   function updateDependentProductPrices() {
     appData.products.forEach(prod => {
       const calculatedCost = getItemUnitPrice(prod.name);
@@ -475,7 +564,7 @@ window.addEventListener('load', function() {
     btn.onclick = function() {
       const targetId = this.getAttribute('data-tab');
 
-      if (targetId === 'tabContent-settings' && !isAdminLoggedIn) {
+      if ((targetId === 'tabContent-settings' || targetId === 'tabContent-manage' || targetId === 'tabContent-add') && !isAdminLoggedIn) {
         const inputUser = prompt('請輸入管理員帳號：');
         if (inputUser === null) return;
         const inputPass = prompt('請輸入管理員密碼：');
@@ -483,7 +572,7 @@ window.addEventListener('load', function() {
 
         if (inputUser === ADMIN_USER && inputPass === ADMIN_PASS) {
           isAdminLoggedIn = true;
-          sessionStorage.setItem('mp_admin_auth_v481', 'true');
+          sessionStorage.setItem('mp_admin_auth_v490', 'true');
           alert('管理員登入成功！');
         } else {
           alert('帳號或密碼錯誤，拒絕存取！');
@@ -500,7 +589,7 @@ window.addEventListener('load', function() {
 
   document.getElementById('btnLogoutAdmin').onclick = function() {
     isAdminLoggedIn = false;
-    sessionStorage.removeItem('mp_admin_auth_v481');
+    sessionStorage.removeItem('mp_admin_auth_v490');
     alert('已登出管理員！');
     document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
@@ -534,14 +623,13 @@ window.addEventListener('load', function() {
       `;
     }).join('');
 
-    // 改用 input 事件，讓你邊輸入價格就即時同步更新下方成品參考價與雲端
     document.querySelectorAll('.mat-price-input').forEach(input => {
       input.oninput = function() {
         appData.rawMaterials[this.getAttribute('data-mat')] = Number(this.value) || 0;
         updateDependentProductPrices();
         saveDataToCloud();
         onProductChange();
-        renderProductManagement();
+        renderProductManageList();
       };
     });
 
@@ -625,7 +713,7 @@ window.addEventListener('load', function() {
     if (idx !== "" && appData.products[idx]) {
       appData.products[idx].marketPrice = Number(this.value) || 0;
       saveDataToCloud();
-      renderProductManagement();
+      renderProductManageList();
     }
     calculate();
   };
@@ -671,121 +759,231 @@ window.addEventListener('load', function() {
     }
   }
 
-  function renderProductManagement() {
+  // 渲染管理清單分頁 (只顯示名稱、類別與 ✏️ / 🗑️ 按鈕)
+  function renderProductManageList() {
     syncRawMaterials();
-    const container = document.getElementById('productRecipeManageList');
+    const container = document.getElementById('productManageList');
+    if (appData.products.length === 0) {
+      container.innerHTML = '<div style="color:#888;">目前沒有任何成品資料。</div>';
+      return;
+    }
+
+    container.innerHTML = appData.products.map((p, idx) => `
+      <div class="product-manage-row">
+        <div class="product-manage-info">
+          <span class="product-manage-title">${p.name}</span>
+          <span class="product-manage-sub">${p.isOreRecipe ? '⛏️ 母礦煉製物' : '📋 組合裝備'} | 市場參考價: ${(p.marketPrice || 0).toLocaleString()} 楓幣</span>
+        </div>
+        <div class="product-manage-actions">
+          <button class="btn-sm btn-primary btn-edit-prod" data-idx="${idx}" title="編輯配方">✏️ 編輯</button>
+          <button class="btn-sm btn-danger btn-del-prod" data-idx="${idx}" title="刪除項目">🗑️ 刪除</button>
+        </div>
+      </div>
+    `).join('');
+
+    container.querySelectorAll('.btn-edit-prod').forEach(btn => {
+      btn.onclick = function() {
+        editingProductIndex = Number(this.getAttribute('data-idx'));
+        openEditModal(editingProductIndex);
+      };
+    });
+
+    container.querySelectorAll('.btn-del-prod').forEach(btn => {
+      btn.onclick = function() {
+        const idx = Number(this.getAttribute('data-idx'));
+        const pName = appData.products[idx].name;
+        if (confirm(`確定要刪除成品「${pName}」嗎？`)) {
+          appData.products.splice(idx, 1);
+          updateDependentProductPrices();
+          saveDataToCloud();
+          refreshUI();
+        }
+      };
+    });
+  }
+
+  // 開啟編輯 Modal
+  function openEditModal(idx) {
+    const p = appData.products[idx];
+    syncRawMaterials();
     const allMatKeys = Object.keys(appData.rawMaterials);
     const allItemNames = allMatKeys.concat(appData.products.map(prod => prod.name));
 
-    container.innerHTML = appData.products.map((p, pIdx) => `
-      <div class="recipe-card-edit" data-pidx="${pIdx}">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:8px;">
-          <div style="display:flex; gap:10px; align-items:center;">
-            <input type="text" value="${p.name}" class="p-name-in" style="font-weight:bold; font-size:16px; width:160px;">
-          </div>
-          <div style="display:flex; gap:10px; align-items:center;">
-            <span style="font-size:13px; font-weight:bold; color:#c55a11;">市場參考價：</span>
-            <input type="number" value="${p.marketPrice || 0}" class="p-marketprice-in" style="width:120px;" placeholder="記錄最低價">
-            <button class="btn-sm btn-danger p-del-btn">🗑️ 刪除</button>
-          </div>
-        </div>
-        <div style="margin-bottom:10px; font-size:13px;">
-          <label style="cursor:pointer; font-weight:bold; color:#c55a11;">
-            <input type="checkbox" class="p-isore-cb" ${p.isOreRecipe ? 'checked' : ''}> 母礦煉製物
-          </label>
-        </div>
+    const body = document.getElementById('modalEditBody');
+    body.innerHTML = `
+      <div style="margin-bottom:12px;">
+        <label style="font-weight:bold; font-size:13px;">成品名稱：</label>
+        <input type="text" id="modalName" value="${p.name}" style="margin-top:4px;">
+      </div>
+      <div style="margin-bottom:12px;">
+        <label style="font-weight:bold; font-size:13px;">市場參考價：</label>
+        <input type="number" id="modalMarketPrice" value="${p.marketPrice || 0}" style="margin-top:4px;">
+      </div>
+      <div style="margin-bottom:12px;">
+        <label style="cursor:pointer; font-weight:bold; color:#c55a11;">
+          <input type="checkbox" id="modalIsOre" ${p.isOreRecipe ? 'checked' : ''}> 母礦煉製物
+        </label>
+      </div>
+      <div id="modalRecipeContainer">
         ${p.isOreRecipe ? `
           <div style="background:#f1f3f5; padding:10px; border-radius:6px; font-size:13px;">
-            母礦：<select class="p-orename-select" style="width:130px; display:inline-block; margin-right:10px;">
-              ${allMatKeys.map(mat => `<option value="${mat}" ${mat === p.oreName ? 'selected' : ''}>${mat}</option>`).join('')}
-            </select>
-            手續費：<input type="number" value="${p.craftFee || 300}" class="p-orefee-in" style="width:90px; display:inline-block;">
+            <div style="margin-bottom:8px;">母礦：
+              <select id="modalOreName" style="margin-top:4px;">
+                ${allMatKeys.map(mat => `<option value="${mat}" ${mat === p.oreName ? 'selected' : ''}>${mat}</option>`).join('')}
+              </select>
+            </div>
+            <div>手續費：
+              <input type="number" id="modalOreFee" value="${p.craftFee || 300}" style="margin-top:4px;">
+            </div>
           </div>
         ` : `
-          <div style="font-size:13px; margin-bottom:8px;">
-            製作費：<input type="number" value="${p.craftFee || 0}" class="p-fee-in" style="width:110px;"> 楓幣
+          <div style="margin-bottom:10px;">
+            製作費：<input type="number" id="modalCraftFee" value="${p.craftFee || 0}" style="margin-top:4px;"> 楓幣
           </div>
-          <div style="font-weight:bold; font-size:13px; margin-bottom:6px; color:#1f497d;">材料需求：</div>
-          <div class="ingredients-list">
+          <div style="font-weight:bold; font-size:13px; margin-bottom:6px; color:#1f497d;">材料需求清單：</div>
+          <div id="modalIngredientsList">
             ${(p.ingredients || []).map((ing, iIdx) => `
-              <div style="display:flex; gap:8px; margin-bottom:6px; align-items:center;" data-iidx="${iIdx}">
-                <select class="p-ing-mat-select" style="flex:1;">
+              <div style="display:flex; gap:8px; margin-bottom:6px; align-items:center;" class="modal-ing-row" data-iidx="${iIdx}">
+                <select class="modal-ing-name" style="flex:1;">
                   ${allItemNames.map(mat => `<option value="${mat}" ${mat === ing.name ? 'selected' : ''}>${mat}</option>`).join('')}
                 </select>
-                <input type="number" value="${ing.qty}" class="p-ing-qty-in" style="width:80px;">個
-                <button class="btn-sm btn-danger p-ing-del-btn">✕</button>
+                <input type="number" class="modal-ing-qty" value="${ing.qty}" style="width:80px;">個
+                <button type="button" class="btn-sm btn-danger modal-del-ing">✕</button>
               </div>
             `).join('')}
           </div>
-          <button class="btn-sm btn-add p-add-ing-btn" style="margin-top:4px;">➕ 新增材料</button>
+          <button type="button" class="btn-sm btn-add" id="modalAddIngBtn" style="margin-top:6px;">➕ 新增材料需求</button>
         `}
       </div>
-    `).join('');
+    `;
+
+    document.getElementById('modalIsOre').onchange = function() {
+      const isOre = this.checked;
+      const container = document.getElementById('modalRecipeContainer');
+      if (isOre) {
+        container.innerHTML = `
+          <div style="background:#f1f3f5; padding:10px; border-radius:6px; font-size:13px;">
+            <div style="margin-bottom:8px;">母礦：
+              <select id="modalOreName" style="margin-top:4px;">
+                ${allMatKeys.map(mat => `<option value="${mat}">${mat}</option>`).join('')}
+              </select>
+            </div>
+            <div>手續費：
+              <input type="number" id="modalOreFee" value="300" style="margin-top:4px;">
+            </div>
+          </div>
+        `;
+      } else {
+        container.innerHTML = `
+          <div style="margin-bottom:10px;">
+            製作費：<input type="number" id="modalCraftFee" value="50000" style="margin-top:4px;"> 楓幣
+          </div>
+          <div style="font-weight:bold; font-size:13px; margin-bottom:6px; color:#1f497d;">材料需求清單：</div>
+          <div id="modalIngredientsList"></div>
+          <button type="button" class="btn-sm btn-add" id="modalAddIngBtn" style="margin-top:6px;">➕ 新增材料需求</button>
+        `;
+        bindModalAddIngEvent();
+      }
+    };
+
+    if (!p.isOreRecipe) {
+      bindModalAddIngEvent();
+    }
+
+    document.getElementById('editModal').classList.add('active');
   }
 
-  document.getElementById('productRecipeManageList').onchange = function(e) {
-    const card = e.target.closest('.recipe-card-edit');
-    if (!card) return;
-    const pIdx = Number(card.getAttribute('data-pidx'));
-    const p = appData.products[pIdx];
-    
-    if (e.target.classList.contains('p-name-in')) p.name = e.target.value;
-    else if (e.target.classList.contains('p-marketprice-in')) {
-      p.marketPrice = Number(e.target.value) || 0;
-      if (document.getElementById('productSelect').value == pIdx) {
-        document.getElementById('inlineMarketPrice').value = p.marketPrice;
-        calculate();
-      }
+  function bindModalAddIngEvent() {
+    const addBtn = document.getElementById('modalAddIngBtn');
+    if (addBtn) {
+      addBtn.onclick = function() {
+        const listContainer = document.getElementById('modalIngredientsList');
+        const allMatKeys = Object.keys(appData.rawMaterials);
+        const allItemNames = allMatKeys.concat(appData.products.map(prod => prod.name));
+        const div = document.createElement('div');
+        div.className = 'modal-ing-row';
+        div.style.cssText = 'display:flex; gap:8px; margin-bottom:6px; align-items:center;';
+        div.innerHTML = `
+          <select class="modal-ing-name" style="flex:1;">
+            ${allItemNames.map(mat => `<option value="${mat}">${mat}</option>`).join('')}
+          </select>
+          <input type="number" class="modal-ing-qty" value="1" style="width:80px;">個
+          <button type="button" class="btn-sm btn-danger modal-del-ing">✕</button>
+        `;
+        div.querySelector('.modal-del-ing').onclick = function() { div.remove(); };
+        listContainer.appendChild(div);
+      };
     }
-    else if (e.target.classList.contains('p-orefee-in') || e.target.classList.contains('p-fee-in')) p.craftFee = Number(e.target.value) || 0;
-    else if (e.target.classList.contains('p-ing-qty-in')) {
-      const iIdx = Number(e.target.closest('[data-iidx]').getAttribute('data-iidx'));
-      p.ingredients[iIdx].qty = Number(e.target.value) || 0;
+    document.querySelectorAll('.modal-del-ing').forEach(btn => {
+      btn.onclick = function() { this.closest('.modal-ing-row').remove(); };
+    });
+  }
+
+  document.getElementById('btnCloseModal').onclick = function() {
+    document.getElementById('editModal').classList.remove('active');
+  };
+
+  document.getElementById('btnSaveModal').onclick = function() {
+    if (editingProductIndex === null || !appData.products[editingProductIndex]) return;
+    const p = appData.products[editingProductIndex];
+
+    p.name = document.getElementById('modalName').value.trim() || '未命名成品';
+    p.marketPrice = Number(document.getElementById('modalMarketPrice').value) || 0;
+    p.isOreRecipe = document.getElementById('modalIsOre').checked;
+
+    if (p.isOreRecipe) {
+      p.oreName = document.getElementById('modalOreName').value;
+      p.craftFee = Number(document.getElementById('modalOreFee').value) || 300;
+      p.ingredients = [];
+    } else {
+      p.craftFee = Number(document.getElementById('modalCraftFee').value) || 0;
+      p.ingredients = [];
+      document.querySelectorAll('.modal-ing-row').forEach(row => {
+        const name = row.querySelector('.modal-ing-name').value;
+        const qty = Number(row.querySelector('.modal-ing-qty').value) || 1;
+        p.ingredients.push({ name, qty });
+      });
     }
-    else if (e.target.classList.contains('p-isore-cb')) {
-      p.isOreRecipe = e.target.checked;
-      if (p.isOreRecipe) { p.oreName = Object.keys(appData.rawMaterials)[0] || "青銅母礦"; p.craftFee = 300; p.ingredients = []; }
-      else { p.craftFee = 50000; p.ingredients = [{ name: "青銅", qty: 1 }]; }
-    } 
-    else if (e.target.classList.contains('p-orename-select')) p.oreName = e.target.value;
-    else if (e.target.classList.contains('p-ing-mat-select')) {
-      const iIdx = Number(e.target.closest('[data-iidx]').getAttribute('data-iidx'));
-      p.ingredients[iIdx].name = e.target.value;
-    }
+
     updateDependentProductPrices();
     saveDataToCloud();
     refreshUI();
+    document.getElementById('editModal').classList.remove('active');
   };
 
-  document.getElementById('productRecipeManageList').onclick = function(e) {
-    const card = e.target.closest('.recipe-card-edit');
-    if (!card) return;
-    const pIdx = Number(card.getAttribute('data-pidx'));
-    const p = appData.products[pIdx];
-    if (e.target.classList.contains('p-del-btn')) {
-      if (confirm(`確定刪除「${p.name}」嗎？`)) { appData.products.splice(pIdx, 1); saveDataToCloud(); refreshUI(); }
-    } else if (e.target.classList.contains('p-ing-del-btn')) {
-      p.ingredients.splice(Number(e.target.closest('[data-iidx]').getAttribute('data-iidx')), 1);
-      updateDependentProductPrices();
-      saveDataToCloud();
-      refreshUI();
-    } else if (e.target.classList.contains('p-add-ing-btn')) {
-      if (!p.ingredients) p.ingredients = [];
-      p.ingredients.push({ name: Object.keys(appData.rawMaterials)[0] || "青銅母礦", qty: 1 });
-      updateDependentProductPrices();
-      saveDataToCloud();
-      refreshUI();
-    }
-  };
+  // 分頁 3：獨立新增成品
+  document.getElementById('btnConfirmAddProduct').onclick = function() {
+    const nameInput = document.getElementById('newProdNameInput');
+    const isOreCb = document.getElementById('newProdIsOreCb');
+    const name = nameInput.value.trim();
 
-  document.getElementById('btnAddProduct').onclick = function() {
-    const name = prompt('請輸入新成品名稱：', '新裝備');
-    if (name && name.trim()) {
-      appData.products.push({ name: name.trim(), isOreRecipe: false, craftFee: 50000, marketPrice: 0, ingredients: [{ name: "青銅", qty: 1 }] });
-      updateDependentProductPrices();
-      saveDataToCloud();
-      refreshUI();
+    if (!name) {
+      alert('請輸入有效的成品名稱！');
+      return;
     }
+
+    appData.products.push({
+      name: name,
+      isOreRecipe: isOreCb.checked,
+      craftFee: isOreCb.checked ? 300 : 50000,
+      marketPrice: 0,
+      oreName: isOreCb.checked ? (Object.keys(appData.rawMaterials)[0] || '青銅母礦') : '',
+      ingredients: isOreCb.checked ? [] : [{ name: Object.keys(appData.rawMaterials)[0] || '青銅母礦', qty: 1 }]
+    });
+
+    updateDependentProductPrices();
+    saveDataToCloud();
+    refreshUI();
+
+    nameInput.value = '';
+    isOreCb.checked = false;
+    alert(`成功新增成品「${name}」！`);
+    
+    // 自動切回管理分頁
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+    document.getElementById('tabContent-manage').classList.add('active');
+    document.querySelector('[data-tab="tabContent-manage"]').classList.add('active');
   };
 
   function applyGalleries() {
@@ -971,7 +1169,7 @@ window.addEventListener('load', function() {
   function refreshUI() {
     renderMarketGrid();
     renderProductDropdown();
-    renderProductManagement();
+    renderProductManageList();
     onProductChange();
     applyGalleries();
     ssToggle.checked = appData.slideshowActive;
