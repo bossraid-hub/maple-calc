@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>楓之谷 母礦連鎖自動成本計算機 v4.2</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      padding: 20px;
+      margin: 0;
+      color: #222;
+      background-color: #111;
+      background-size: cover;
+      background-position: center;
+      background-attachment: fixed;
+      min-height: 100vh;
+    }
+    .overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.2);
+      z-index: 1;
+      pointer-events: none;
+    }
+    .container {
+      position: relative;
+      z-index: 2;
+      max-width: 880px;
+      margin: 0 auto;
+      background: rgba(255, 255, 255, 0.88);
+      padding: 25px;
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+      backdrop-filter: blur(8px);
+    }
+    .tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      border-bottom: 2px solid rgba(0,0,0,0.1);
+      padding-bottom: 10px;
+    }
+    .tab-btn {
+      padding: 10px 18px;
+      border: none;
+      background: rgba(255, 255, 255, 0.8);
+      color: #333;
+      font-size: 15px;
+      font-weight: bold;
+      border-radius: 8px;
+      cursor: pointer;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.08);
+      transition: all 0.2s;
+    }
+    .tab-btn.active {
+      background: #c55a11 !important;
+      color: #ffffff !important;
+    }
+    .tab-content { display: none; }
+    .tab-content.active { display: block !important; }
+
+    h2 { margin-top: 0; color: #c55a11; display: flex; justify-content: space-between; align-items: center; font-size: 22px; }
+    .section-title {
+      font-weight: bold; margin-top: 20px; margin-bottom: 12px; color: #1f497d; font-size: 16px;
+      border-left: 4px solid #1f497d; padding-left: 8px; display: flex; justify-content: space-between; align-items: center;
+    }
+    .btn-sm { padding: 6px 12px; font-size: 13px; border-radius: 6px; border: none; cursor: pointer; font-weight: bold; }
+    .btn-add { background: #28a745; color: white; }
+    .btn-add:hover { background: #218838; }
+    .btn-secondary { background: #6c757d; color: white; }
+    .btn-danger { background: #dc3545; color: white; }
+    .btn-danger:hover { background: #c82333; }
+
+    .price-market-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 12px;
+      background: rgba(255, 255, 255, 0.95);
+      padding: 15px;
+      border-radius: 12px;
+      border: 1px solid rgba(0,0,0,0.1);
+    }
+    .price-item { display: flex; flex-direction: column; background: #f8f9fa; padding: 10px; border-radius: 8px; border: 1px solid #eee; position: relative; }
+    .price-item label { font-size: 13px; font-weight: bold; color: #333; margin-bottom: 4px; }
+    .price-subtext { font-size: 11px; color: #666; margin-top: 4px; }
+    .mat-del-btn { position: absolute; top: 6px; right: 6px; background: none; border: none; color: #dc3545; font-size: 14px; cursor: pointer; }
+
+    select, input { padding: 8px 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; width: 100%; outline: none; background: #fff; }
+
+    .product-select-box { background: rgba(255, 255, 255, 0.95); border: 2px solid #c55a11; padding: 15px; border-radius: 12px; margin-top: 15px; }
+    .recipe-list-box { margin-top: 10px; background: rgba(240, 244, 248, 0.9); padding: 12px; border-radius: 8px; font-size: 14px; }
+    .recipe-item { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px dashed #ccc; }
+
+    .card-result { background: rgba(255, 248, 230, 0.95); border-left: 6px solid #ffc000; padding: 20px; border-radius: 10px; margin-top: 20px; }
+    .result-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 15px; }
+    .result-row.total { font-size: 18px; font-weight: bold; color: #c55a11; }
+    .result-row.profit { font-size: 20px; font-weight: bold; border-top: 1px dashed #d9b26a; padding-top: 10px; margin-top: 10px; }
+
+    .recipe-card-edit { background: rgba(255, 255, 255, 0.95); border: 1px solid #ddd; padding: 15px; border-radius: 10px; margin-bottom: 12px; }
+    .bg-setting-panel { background: rgba(255, 255, 255, 0.9); padding: 15px; border-radius: 10px; margin-bottom: 15px; font-size: 13px; border: 1px solid rgba(0,0,0,0.1); }
+    .bg-thumbs { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+    .bg-thumb-item { position: relative; width: 80px; height: 60px; border-radius: 6px; overflow: hidden; border: 2px solid transparent; }
+    .bg-thumb-item.active { border-color: #c55a11; }
+    .bg-thumb-item img { width: 100%; height: 100%; object-fit: cover; cursor: pointer; }
+    .bg-thumb-del { position: absolute; top: 2px; right: 2px; background: rgba(220,53,69,0.85); color: white; border: none; border-radius: 50%; width: 18px; height: 18px; font-size: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  </style>
+</head>
+<body>
+
+<div class="overlay" id="bgOverlay"></div>
+
+<div class="container" id="mainContainer">
+  <h2>
+    <span>🍁 楓之谷 母礦連鎖自動成本計算機 v4.2</span>
+    <button class="btn-sm btn-secondary" id="btnNextBg">📷 換背景照片</button>
+  </h2>
+
+  <!-- 頂端頁籤切換 -->
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="tabContent-calc">🧮 快速選成品計算</button>
+    <button class="tab-btn" data-tab="tabContent-recipe">📜 管理成品與合成配方</button>
+    <button class="tab-btn" data-tab="tabContent-settings">⚙️ 設定與背景相冊</button>
+  </div>
+
+  <!-- 分頁 1: 計算機 -->
+  <div id="tabContent-calc" class="tab-content active">
+    <div class="section-title">
+      <span>1. 輸入基礎「母礦」或「打怪雜物」單價</span>
+      <button class="btn-sm btn-add" id="btnAddRawMat">➕ 新增母礦/打怪雜物</button>
+    </div>
+    <div class="price-market-grid" id="marketPriceGrid"></div>
+
+    <div class="section-title"><span>2. 選擇欲製作的成品 / 裝備 / 合成物</span></div>
+    <div class="product-select-box">
+      <label style="font-weight:bold; font-size:15px; color:#c55a11; display:block; margin-bottom:8px;">選擇項目：</label>
+      <select id="productSelect" style="font-size:16px; padding:10px; font-weight:bold;"></select>
+      <div class="recipe-list-box" id="recipeDetailsBox"></div>
+    </div>
+
+    <div class="section-title">3. 售價與利潤分析</div>
+    <div style="display:flex; gap:15px; flex-wrap:wrap;">
+      <div style="flex:1; min-width:200px;">
+        <label style="font-size:13px; font-weight:bold;">🏷️ 我的預估售價 (楓幣)</label>
+        <input type="number" id="sellPrice" placeholder="欲掛賣價格" value="0">
+      </div>
+    </div>
+
+    <div class="card-result">
+      <div class="result-row total"><span>總製作成本：</span><span id="totalCost">0 楓幣</span></div>
+      <div class="result-row"><span>扣除 3% 交易稅後淨收：</span><span id="netIncome">0 楓幣</span></div>
+      <div class="result-row profit"><span>預期純利潤：</span><span id="profit">0 楓幣</span></div>
+      <div id="profitAdvice" style="font-size: 13px; margin-top: 8px; font-weight: bold;"></div>
+    </div>
+  </div>
+
+  <!-- 分頁 2: 配方管理 -->
+  <div id="tabContent-recipe" class="tab-content">
+    <div class="section-title">
+      <span>新增 / 編輯成品或中階合成物配方</span>
+      <button class="btn-sm btn-add" id="btnAddProduct">➕ 新增合成配方</button>
+    </div>
+    <div style="font-size:12px; color:#555; margin-bottom:10px;">
+      💡 <b>小提示：</b>若此項目是由「10個母礦 + 300元合成費」煉製而成的（例如青銅、鋼鐵），請勾選「是母礦合成物」。
+    </div>
+    <div id="productRecipeManageList"></div>
+  </div>
+
+  <!-- 分頁 3: 背景設定 -->
+  <div id="tabContent-settings" class="tab-content">
+    <div class="section-title">🖼️ 背景圖多張相冊 (可批量上傳 / 網址)</div>
+    <div class="bg-setting-panel">
+      <div style="margin-bottom: 12px; display:flex; gap:10px; align-items:center;">
+        <label style="font-weight:bold;">1. 選擇電腦照片：</label>
+        <input type="file" id="bgBatchFileInput" accept="image/*" multiple>
+      </div>
+      <div style="margin-bottom: 12px; display:flex; gap:10px; align-items:center;">
+        <label style="font-weight:bold;">2. 圖片網址：</label>
+        <input type="text" id="bgUrlInput" placeholder="貼上網址 http..." style="flex:1;">
+        <button class="btn-sm btn-secondary" id="btnAddBgUrl">新增網址</button>
+      </div>
+      <div style="font-weight:bold; margin-top:10px;">目前相冊：</div>
+      <div class="bg-thumbs" id="bgThumbsContainer"></div>
+    </div>
+
+    <div class="section-title">✨ 照片清晰度與透明度調節</div>
+    <div class="bg-setting-panel">
+      <div style="margin-bottom: 12px;">
+        <label style="font-weight:bold;">白色計算機面板透明度：</label>
+        <input type="range" id="panelOpacityRange" min="0.2" max="0.95" step="0.05" value="0.88">
+        <span id="panelOpacityVal">88%</span>
+      </div>
+      <div>
+        <label style="font-weight:bold;">黑色背景遮罩濃度：</label>
+        <input type="range" id="overlayRange" min="0" max="0.7" step="0.05" value="0.2">
+        <span id="overlayVal">20%</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+window.addEventListener('load', function() {
+
+  // 預設資料
+  const defaultRawMaterials = {
+    "青銅母礦": 4500,
+    "鋼鐵母礦": 5000,
+    "木柴": 1000,
+    "堅硬羽毛": 2000,
+    "柔軟羽毛": 2500
+  };
+
+  const defaultProducts = [
+    {
+      name: "青銅",
+      isOreRecipe: true,
+      oreName: "青銅母礦",
+      craftFee: 300,
+      ingredients: []
+    },
+    {
+      name: "鋼鐵",
+      isOreRecipe: true,
+      oreName: "鋼鐵母礦",
+      craftFee: 300,
+      ingredients: []
+    },
+    {
+      name: "青銅長劍",
+      isOreRecipe: false,
+      craftFee: 50000,
+      ingredients: [
+        { name: "青銅", qty: 3 },
+        { name: "木柴", qty: 10 }
+      ]
+    },
+    {
+      name: "青銅箭矢",
+      isOreRecipe: false,
+      craftFee: 10000,
+      ingredients: [
+        { name: "青銅", qty: 1 },
+        { name: "鋼鐵", qty: 1 },
+        { name: "堅硬羽毛", qty: 5 }
+      ]
+    }
+  ];
+
+  let rawMaterials = {};
+  let products = [];
+  let bgImages = ["https://images.unsplash.com/photo-1511447333015-45b65e60f6d5?auto=format&fit=crop&w=1920&q=80"];
+  let currentBgIndex = 0;
+
+  // 資料防遺失機制：讀取舊資料並與預設值智慧合併（不會覆蓋你的自訂設定）
+  try {
+    const savedRaws = localStorage.getItem('mp_raw_prices_v4');
+    if (savedRaws) {
+      rawMaterials = JSON.parse(savedRaws);
+    } else {
+      rawMaterials = { ...defaultRawMaterials };
+    }
+
+    const savedProds = localStorage.getItem('mp_products_v4');
+    if (savedProds) {
+      products = JSON.parse(savedProds);
+    } else {
+      products = JSON.parse(JSON.stringify(defaultProducts));
+    }
+
+    const savedBgs = localStorage.getItem('mp_bg_list_v4');
+    if (savedBgs) bgImages = JSON.parse(savedBgs);
+  } catch (e) {
+    console.warn("Storage load error:", e);
+    rawMaterials = { ...defaultRawMaterials };
+    products = JSON.parse(JSON.stringify(defaultProducts));
+  }
+
+  function syncRawMaterials() {
+    products.forEach(p => {
+      if (p.isOreRecipe && p.oreName && !(p.oreName in rawMaterials)) {
+        rawMaterials[p.oreName] = 4500;
+      }
+      if (p.ingredients) {
+        p.ingredients.forEach(ing => {
+          const isProducedByOre = products.some(prod => prod.name === ing.name && prod.isOreRecipe);
+          if (!isProducedByOre && ing.name && !(ing.name in rawMaterials)) {
+            rawMaterials[ing.name] = 0;
+          }
+        });
+      }
+    });
+  }
+
+  function saveData() {
+    try {
+      localStorage.setItem('mp_raw_prices_v4', JSON.stringify(rawMaterials));
+      localStorage.setItem('mp_products_v4', JSON.stringify(products));
+      localStorage.setItem('mp_bg_list_v4', JSON.stringify(bgImages));
+    } catch(e) {}
+  }
+
+  function getItemUnitPrice(itemName) {
+    if (itemName in rawMaterials) {
+      return rawMaterials[itemName];
+    }
+    const prod = products.find(p => p.name === itemName);
+    if (prod && prod.isOreRecipe) {
+      const oreP = rawMaterials[prod.oreName] || 0;
+      return (oreP * 10) + (prod.craftFee || 300);
+    }
+    if (prod && !prod.isOreRecipe) {
+      let cost = prod.craftFee || 0;
+      if (prod.ingredients) {
+        prod.ingredients.forEach(ing => {
+          cost += getItemUnitPrice(ing.name) * ing.qty;
+        });
+      }
+      return cost;
+    }
+    return 0;
+  }
+
+  // 頁籤切換
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.onclick = function() {
+      const targetId = this.getAttribute('data-tab');
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+      document.getElementById(targetId).classList.add('active');
+      this.classList.add('active');
+    };
+  });
+
+  // 1. 渲染第一頁母礦與打怪雜物行情（支援手動新增與刪除雜物）
+  function renderMarketGrid() {
+    syncRawMaterials();
+    const grid = document.getElementById('marketPriceGrid');
+    const keys = Object.keys(rawMaterials);
+
+    if (keys.length === 0) {
+      grid.innerHTML = '<div style="color:#888;">尚未有任何材料項目。</div>';
+      return;
+    }
+
+    grid.innerHTML = keys.map(mat => {
+      // 檢查是否被任何配方使用中
+      const isUsed = products.some(p => 
+        (p.isOreRecipe && p.oreName === mat) || 
+        (!p.isOreRecipe && p.ingredients && p.ingredients.some(ing => ing.name === mat))
+      );
+
+      return `
+        <div class="price-item" data-mat="${mat}">
+          ${!isUsed ? `<button class="mat-del-btn" title="刪除此雜物">✕</button>` : ''}
+          <label>${mat} (單價)</label>
+          <input type="number" class="mat-price-input" data-mat="${mat}" value="${rawMaterials[mat]}">
+          <div class="price-subtext">打怪掉落 / 基礎材料</div>
+        </div>
+      `;
+    }).join('');
+
+    document.querySelectorAll('.mat-price-input').forEach(input => {
+      input.oninput = function() {
+        const mat = this.getAttribute('data-mat');
+        rawMaterials[mat] = Number(this.value) || 0;
+        saveData();
+        onProductChange();
+      };
+    });
+
+    // 刪除未使用的手動雜物
+    document.querySelectorAll('.mat-del-btn').forEach(btn => {
+      btn.onclick = function() {
+        const item = this.closest('.price-item');
+        const mat = item.getAttribute('data-mat');
+        if (confirm(`確定要刪除雜物「${mat}」嗎？`)) {
+          delete rawMaterials[mat];
+          saveData();
+          renderMarketGrid();
+          renderProductManagement();
+        }
+      };
+    });
+  }
+
+  document.getElementById('btnAddRawMat').onclick = function() {
+    const matName = prompt('請輸入打怪掉落物或雜物名稱 (例如: 樹枝、動物皮毛、螺絲)：');
+    if (matName && matName.trim()) {
+      const name = matName.trim();
+      if (!(name in rawMaterials)) {
+        rawMaterials[name] = 0;
+        saveData();
+        renderMarketGrid();
+        renderProductManagement();
+      } else {
+        alert('此項目已在清單中！');
+      }
+    }
+  };
+
+  // 2. 第一頁：成品選單與連鎖計算
+  function renderProductDropdown() {
+    const select = document.getElementById('productSelect');
+    if (products.length === 0) {
+      select.innerHTML = '<option value="">無項目，請至管理配方新增</option>';
+      document.getElementById('recipeDetailsBox').innerHTML = '無配方資訊';
+      return;
+    }
+    select.innerHTML = products.map((p, idx) => `<option value="${idx}">${p.name} ${p.isOreRecipe ? '(母礦合成物)' : '(組合裝備)'}</option>`).join('');
+  }
+
+  function onProductChange() {
+    const select = document.getElementById('productSelect');
+    const idx = select.value;
+    if (idx === "" || !products[idx]) {
+      calculate();
+      return;
+    }
+
+    const product = products[idx];
+    const box = document.getElementById('recipeDetailsBox');
+
+    if (product.isOreRecipe) {
+      const oreP = rawMaterials[product.oreName] || 0;
+      const unitCost = (oreP * 10) + (product.craftFee || 300);
+      box.innerHTML = `
+        <div style="font-weight:bold; color:#1f497d; margin-bottom:4px;">⛏️ 母礦煉製公式：</div>
+        <div class="recipe-item">
+          <span>• 10 個 ${product.oreName} (${oreP.toLocaleString()} × 10)</span>
+          <span>${(oreP * 10).toLocaleString()} 楓幣</span>
+        </div>
+        <div class="recipe-item" style="color:#c55a11; font-weight:bold;">
+          <span>• 合成手續費</span>
+          <span>${(product.craftFee || 300).toLocaleString()} 楓幣</span>
+        </div>
+        <div style="margin-top:6px; font-weight:bold; color:#2e75b6; text-align:right;">
+          合成 1 個 ${product.name} 總成本 = ${unitCost.toLocaleString()} 楓幣
+        </div>
+      `;
+    } else {
+      box.innerHTML = `
+        <div style="font-weight:bold; margin-bottom:6px; color:#1f497d;">📋 裝備組裝配方需求：</div>
+        ${(product.ingredients || []).map(ing => {
+          const unitPrice = getItemUnitPrice(ing.name);
+          const subtotal = unitPrice * ing.qty;
+          return `
+            <div class="recipe-item">
+              <span>• ${ing.name} x${ing.qty} 個</span>
+              <span>單價: ${unitPrice.toLocaleString()} 楓幣 (小計: ${subtotal.toLocaleString()})</span>
+            </div>
+          `;
+        }).join('')}
+        <div class="recipe-item" style="color:#c55a11; font-weight:bold;">
+          <span>• NPC 製作費</span>
+          <span>${(product.craftFee||0).toLocaleString()} 楓幣</span>
+        </div>
+      `;
+    }
+
+    calculate();
+  }
+
+  document.getElementById('productSelect').onchange = onProductChange;
+  document.getElementById('sellPrice').oninput = calculate;
+
+  function calculate() {
+    const select = document.getElementById('productSelect');
+    const idx = select.value;
+    if (idx === "" || !products[idx]) {
+      document.getElementById('totalCost').innerText = '0 楓幣';
+      document.getElementById('netIncome').innerText = '0 楓幣';
+      document.getElementById('profit').innerText = '0 楓幣';
+      return;
+    }
+
+    const product = products[idx];
+    let totalCost = 0;
+
+    if (product.isOreRecipe) {
+      const oreP = rawMaterials[product.oreName] || 0;
+      totalCost = (oreP * 10) + (product.craftFee || 300);
+    } else {
+      totalCost = product.craftFee || 0;
+      if (product.ingredients) {
+        product.ingredients.forEach(ing => {
+          totalCost += getItemUnitPrice(ing.name) * ing.qty;
+        });
+      }
+    }
+
+    const sellPrice = Number(document.getElementById('sellPrice').value) || 0;
+    const netIncome = Math.floor(sellPrice * 0.97);
+    const profit = netIncome - totalCost;
+
+    document.getElementById('totalCost').innerText = totalCost.toLocaleString() + ' 楓幣';
+    document.getElementById('netIncome').innerText = netIncome.toLocaleString() + ' 楓幣';
+    document.getElementById('profit').innerText = profit.toLocaleString() + ' 楓幣';
+
+    const profitEl = document.getElementById('profit');
+    const adviceEl = document.getElementById('profitAdvice');
+
+    if (profit > 0) {
+      profitEl.style.color = '#28a745';
+      const margin = sellPrice > 0 ? ((profit / sellPrice) * 100).toFixed(1) : 0;
+      adviceEl.innerText = `✅ 預估獲利！純利潤率約 ${margin}%`;
+      adviceEl.style.color = '#28a745';
+    } else if (profit < 0) {
+      profitEl.style.color = '#dc3545';
+      adviceEl.innerText = `⚠️ 當前價格將虧損 ${Math.abs(profit).toLocaleString()} 楓幣！`;
+      adviceEl.style.color = '#dc3545';
+    } else {
+      profitEl.style.color = '#6c757d';
+      adviceEl.innerText = '➖ 打平成本';
+      adviceEl.style.color = '#6c757d';
+    }
+  }
+
+  // 3. 第二頁：配方管理（使用事件委派）
+  function renderProductManagement() {
+    syncRawMaterials();
+    const container = document.getElementById('productRecipeManageList');
+    const allMatKeys = Object.keys(rawMaterials);
+    const allItemNames = allMatKeys.concat(products.map(prod => prod.name));
+
+    container.innerHTML = products.map((p, pIdx) => `
+      <div class="recipe-card-edit" data-pidx="${pIdx}">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <div>
+            <label style="font-size:12px; font-weight:bold; color:#666;">項目名稱：</label>
+            <input type="text" value="${p.name}" class="p-name-in" style="font-weight:bold; font-size:16px; width:180px;">
+          </div>
+          <button class="btn-sm btn-danger p-del-btn">🗑️ 刪除此項目</button>
+        </div>
+
+        <div style="margin-bottom:10px; font-size:13px; display:flex; align-items:center; gap:10px;">
+          <label style="cursor:pointer; font-weight:bold; color:#c55a11;">
+            <input type="checkbox" class="p-isore-cb" ${p.isOreRecipe ? 'checked' : ''}> 
+            是否為「10個母礦 + 合成費」煉製物？
+          </label>
+        </div>
+
+        ${p.isOreRecipe ? `
+          <div style="background:#f1f3f5; padding:10px; border-radius:6px; font-size:13px;">
+            所須母礦：
+            <select class="p-orename-select" style="width:140px; display:inline-block; margin-right:10px;">
+              ${allMatKeys.map(mat => `<option value="${mat}" ${mat === p.oreName ? 'selected' : ''}>${mat}</option>`).join('')}
+            </select>
+            合成手續費：<input type="number" value="${p.craftFee || 300}" class="p-orefee-in" style="width:100px; display:inline-block;"> 楓幣
+          </div>
+        ` : `
+          <div style="font-size:13px; margin-bottom:8px;">
+            NPC 製作手續費：<input type="number" value="${p.craftFee || 0}" class="p-fee-in" style="width:120px;"> 楓幣
+          </div>
+          <div style="font-weight:bold; font-size:13px; margin-bottom:6px; color:#1f497d;">組裝材料需求：</div>
+          <div class="ingredients-list">
+            ${(p.ingredients || []).map((ing, iIdx) => `
+              <div style="display:flex; gap:8px; margin-bottom:6px; align-items:center;" data-iidx="${iIdx}">
+                <select class="p-ing-mat-select" style="flex:1;">
+                  ${allItemNames.map(mat => `<option value="${mat}" ${mat === ing.name ? 'selected' : ''}>${mat}</option>`).join('')}
+                </select>
+                <input type="number" value="${ing.qty}" class="p-ing-qty-in" style="width:90px;" placeholder="數量"> 個
+                <button class="btn-sm btn-danger p-ing-del-btn">✕ 刪除</button>
+              </div>
+            `).join('')}
+          </div>
+          <button class="btn-sm btn-add p-add-ing-btn" style="margin-top:6px;">➕ 新增材料需求</button>
+        `}
+      </div>
+    `).join('');
+  }
+
+  document.getElementById('productRecipeManageList').oninput = function(e) {
+    const card = e.target.closest('.recipe-card-edit');
+    if (!card) return;
+    const pIdx = Number(card.getAttribute('data-pidx'));
+    const p = products[pIdx];
+
+    if (e.target.classList.contains('p-name-in')) {
+      p.name = e.target.value;
+      saveProductsUI();
+    } else if (e.target.classList.contains('p-orefee-in') || e.target.classList.contains('p-fee-in')) {
+      p.craftFee = Number(e.target.value) || 0;
+      saveProductsUI();
+    } else if (e.target.classList.contains('p-ing-qty-in')) {
+      const row = e.target.closest('[data-iidx]');
+      const iIdx = Number(row.getAttribute('data-iidx'));
+      p.ingredients[iIdx].qty = Number(e.target.value) || 0;
+      saveProductsUI();
+    }
+  };
+
+  document.getElementById('productRecipeManageList').onchange = function(e) {
+    const card = e.target.closest('.recipe-card-edit');
+    if (!card) return;
+    const pIdx = Number(card.getAttribute('data-pidx'));
+    const p = products[pIdx];
+
+    if (e.target.classList.contains('p-isore-cb')) {
+      p.isOreRecipe = e.target.checked;
+      if (p.isOreRecipe) {
+        p.oreName = Object.keys(rawMaterials)[0] || "青銅母礦";
+        p.craftFee = 300;
+        p.ingredients = [];
+      } else {
+        p.craftFee = 50000;
+        p.ingredients = [{ name: "青銅", qty: 1 }];
+      }
+      saveProductsUI();
+    } else if (e.target.classList.contains('p-orename-select')) {
+      p.oreName = e.target.value;
+      saveProductsUI();
+    } else if (e.target.classList.contains('p-ing-mat-select')) {
+      const row = e.target.closest('[data-iidx]');
+      const iIdx = Number(row.getAttribute('data-iidx'));
+      p.ingredients[iIdx].name = e.target.value;
+      saveProductsUI();
+    }
+  };
+
+  document.getElementById('productRecipeManageList').onclick = function(e) {
+    const card = e.target.closest('.recipe-card-edit');
+    if (!card) return;
+    const pIdx = Number(card.getAttribute('data-pidx'));
+    const p = products[pIdx];
+
+    if (e.target.classList.contains('p-del-btn')) {
+      if (confirm(`確定刪除「${p.name}」嗎？`)) {
+        products.splice(pIdx, 1);
+        saveProductsUI();
+      }
+    } else if (e.target.classList.contains('p-ing-del-btn')) {
+      const row = e.target.closest('[data-iidx]');
+      const iIdx = Number(row.getAttribute('data-iidx'));
+      p.ingredients.splice(iIdx, 1);
+      saveProductsUI();
+    } else if (e.target.classList.contains('p-add-ing-btn')) {
+      const firstMat = Object.keys(rawMaterials)[0] || "青銅母礦";
+      if (!p.ingredients) p.ingredients = [];
+      p.ingredients.push({ name: firstMat, qty: 1 });
+      saveProductsUI();
+    }
+  };
+
+  function saveProductsUI() {
+    saveData();
+    renderMarketGrid();
+    renderProductDropdown();
+    renderProductManagement();
+    onProductChange();
+  }
+
+  document.getElementById('btnAddProduct').onclick = function() {
+    const prodName = prompt('請輸入新建成品的名稱 (例如: 黃金長劍)：', '新裝備或合成物');
+    if (prodName && prodName.trim()) {
+      products.push({
+        name: prodName.trim(),
+        isOreRecipe: false,
+        craftFee: 50000,
+        ingredients: [{ name: "青銅", qty: 1 }]
+      });
+      saveProductsUI();
+    }
+  };
+
+  // 背景相冊與透明度設定
+  function applyBgImage() {
+    if (bgImages.length > 0) {
+      if (currentBgIndex >= bgImages.length) currentBgIndex = 0;
+      document.body.style.backgroundImage = `url('${bgImages[currentBgIndex]}')`;
+    }
+    renderBgThumbs();
+  }
+
+  function renderBgThumbs() {
+    const container = document.getElementById('bgThumbsContainer');
+    container.innerHTML = bgImages.map((img, idx) => `
+      <div class="bg-thumb-item ${idx === currentBgIndex ? 'active' : ''}" data-idx="${idx}">
+        <img src="${img}" alt="背景">
+        <button class="bg-thumb-del" data-idx="${idx}">✕</button>
+      </div>
+    `).join('');
+
+    document.querySelectorAll('.bg-thumb-item').forEach(el => {
+      el.onclick = function(e) {
+        if (e.target.tagName !== 'BUTTON') {
+          currentBgIndex = Number(this.getAttribute('data-idx'));
+          applyBgImage();
+        }
+      };
+    });
+
+    document.querySelectorAll('.bg-thumb-del').forEach(el => {
+      el.onclick = function(e) {
+        e.stopPropagation();
+        const idx = Number(this.getAttribute('data-idx'));
+        bgImages.splice(idx, 1);
+        saveData();
+        applyBgImage();
+      };
+    });
+  }
+
+  document.getElementById('btnNextBg').onclick = function() {
+    if (bgImages.length > 0) {
+      currentBgIndex = (currentBgIndex + 1) % bgImages.length;
+      applyBgImage();
+    }
+  };
+
+  document.getElementById('btnAddBgUrl').onclick = function() {
+    const urlInput = document.getElementById('bgUrlInput');
+    const url = urlInput.value.trim();
+    if (url) {
+      bgImages.push(url);
+      saveData();
+      currentBgIndex = bgImages.length - 1;
+      applyBgImage();
+      urlInput.value = '';
+    }
+  };
+
+  document.getElementById('bgBatchFileInput').onchange = function() {
+    if (this.files && this.files.length > 0) {
+      let loaded = 0;
+      Array.from(this.files).forEach(file => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          bgImages.push(e.target.result);
+          loaded++;
+          if (loaded === this.files.length) {
+            saveData();
+            currentBgIndex = bgImages.length - 1;
+            applyBgImage();
+          }
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+  };
+
+  document.getElementById('panelOpacityRange').oninput = function() {
+    document.getElementById('mainContainer').style.background = `rgba(255, 255, 255, ${this.value})`;
+    document.getElementById('panelOpacityVal').innerText = Math.round(this.value * 100) + '%';
+  };
+
+  document.getElementById('overlayRange').oninput = function() {
+    document.getElementById('bgOverlay').style.background = `rgba(0, 0, 0, ${this.value})`;
+    document.getElementById('overlayVal').innerText = Math.round(this.value * 100) + '%';
+  };
+
+  // 初始化啟動
+  renderMarketGrid();
+  renderProductDropdown();
+  renderProductManagement();
+  onProductChange();
+  applyBgImage();
+});
+</script>
+
+</body>
+</html>
