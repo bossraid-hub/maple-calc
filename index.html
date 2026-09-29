@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>楓之谷 母礦連鎖自動成本計算機 v4.9.3 (雲端同步版)</title>
+  <title>楓之谷 母礦連鎖自動成本計算機 v4.9.4 (獨立雲端資料版)</title>
   
-  <!-- 自訂分頁圖示 (使用穩定圖示源) -->
+  <!-- 自訂分頁圖示 -->
   <link rel="icon" type="image/png" href="https://icons.iconarchive.com/icons/raindropmemory/legend-of-mushroom/128/Maple-icon.png">
 
   <!-- 引入 Firebase SDK -->
@@ -267,7 +267,7 @@
 
 <div class="container" id="mainContainer">
   <h2>
-    <span>🍁 楓之谷 母礦連鎖自動成本計算機 v4.9.3</span>
+    <span>🍁 楓之谷 母礦連鎖自動成本計算機 v4.9.4</span>
     <div style="display:flex; gap:8px;">
       <button class="btn-sm btn-secondary" id="btnPrevBg">◀ 側邊上一張</button>
       <button class="btn-sm btn-secondary" id="btnNextBg">側邊下一張 ▶</button>
@@ -411,7 +411,8 @@ const firebaseConfig = {
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
-const dbRef = db.ref('maple_calculator_v493');
+// 💡 改用獨立專屬的雲端路徑，以後更新程式碼絕不會蓋掉個人資料！
+const dbRef = db.ref('maple_calculator_user_data_v494');
 
 window.addEventListener('load', function() {
 
@@ -419,20 +420,12 @@ window.addEventListener('load', function() {
     rawMaterials: {
       "青銅母礦": 4500,
       "鋼鐵母礦": 5000,
-      "木柴": 1000,
-      "堅硬羽毛": 2000,
-      "柔軟羽毛": 2500
+      "木柴": 1000
     },
     products: [
-      { name: "青銅", isOreRecipe: true, oreName: "青銅母礦", craftFee: 300, marketPrice: 48000, ingredients: [] },
-      { name: "鋼鐵", isOreRecipe: true, oreName: "鋼鐵母礦", craftFee: 300, marketPrice: 53000, ingredients: [] },
       {
-        name: "合成木材", isOreRecipe: false, craftFee: 0, marketPrice: 10000,
+        name: "合成木材 (組合裝備)", isOreRecipe: false, craftFee: 0, marketPrice: 9190,
         ingredients: [{ name: "木柴", qty: 5 }]
-      },
-      {
-        name: "青銅長劍", isOreRecipe: false, craftFee: 50000, marketPrice: 200000,
-        ingredients: [{ name: "青銅", qty: 3 }, { name: "木柴", qty: 10 }]
       }
     ],
     bgImages: ["https://images.unsplash.com/photo-1511447333015-45b65e60f6d5?auto=format&fit=crop&w=600&q=80"],
@@ -492,7 +485,6 @@ window.addEventListener('load', function() {
     });
   }
 
-  // 千分位格式化工具函數
   function formatNumber(num) {
     if (num === '' || num === null || isNaN(num)) return '';
     return Number(num).toLocaleString('en-US');
@@ -503,10 +495,8 @@ window.addEventListener('load', function() {
     return Number(String(str).replace(/,/g, '')) || 0;
   }
 
-  // 為所有 class="comma-input" 的輸入框綁聯動與千分位格式
   function bindCommaInputs() {
     document.querySelectorAll('.comma-input').forEach(input => {
-      // 避免重複綁定
       if (input.dataset.commaBound) return;
       input.dataset.commaBound = "true";
 
@@ -650,7 +640,6 @@ window.addEventListener('load', function() {
     const product = appData.products[idx];
     const box = document.getElementById('recipeDetailsBox');
 
-    // 帶入初始預設售價
     const marketInput = document.getElementById('inlineMarketPrice');
     if (!marketInput.dataset.userEdited || marketInput.dataset.currentProd !== product.name) {
       marketInput.value = formatNumber(product.marketPrice || 0);
@@ -702,7 +691,6 @@ window.addEventListener('load', function() {
 
     const product = appData.products[idx];
     
-    // 完整計算總成本（包含組合裝備的材料清單加總與製作費）
     let totalCost = product.isOreRecipe ? ((appData.rawMaterials[product.oreName] || 0) * 10) + (product.craftFee || 300) : (product.craftFee || 0);
     if (!product.isOreRecipe && product.ingredients) {
       product.ingredients.forEach(ing => { 
