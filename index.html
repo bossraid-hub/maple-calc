@@ -277,7 +277,7 @@
     <button class="tab-btn" data-tab="tabContent-exp">📊 經驗與打怪效率計算機 (本地獨立運算)</button>
     <button class="tab-btn" data-tab="tabContent-manage">📜 管理成品</button>
     <button class="tab-btn" data-tab="tabContent-add">➕ 新增成品配方</button>
-    <button class="tab-btn" data-tab="tabContent-settings" id="btnTabSettings">⚙️ 設定</button>
+    <button class="tab-btn" data-tab="tabContent-settings" id="btnTabSettings">⚙️️ 設定</button>
   </div>
 
   <div id="tabContent-calc" class="tab-content active">
@@ -293,7 +293,7 @@
       <select id="productSelect" style="font-size:16px; padding:10px; font-weight:bold;"></select>
       
       <div style="margin-top: 12px; display: flex; align-items: center; gap: 10px; background: rgba(255, 255, 255, 0.8); padding: 8px 12px; border-radius: 8px; border: 1px solid #ddd;">
-        <span style="font-weight: bold; font-size: 13px; color: #1f497d; white-space: nowrap;">🏷️️ 當前市場售價 / 最低價：</span>
+        <span style="font-weight: bold; font-size: 13px; color: #1f497d; white-space: nowrap;">🏷 當前市場售價 / 最低價：</span>
         <input type="text" id="inlineMarketPrice" class="comma-input" placeholder="請手動輸入要測試的拍賣售價" style="font-weight: bold; color: #c55a11;">
       </div>
 
@@ -307,7 +307,8 @@
       <hr style="border:0; border-top:1px dashed #d9b26a; margin:10px 0;">
       <div class="result-row profit"><span>預期純利潤 (以 3% 計算)：</span><span id="profit3pct">0 楓幣</span></div>
       <div class="result-row profit"><span>預期純利潤 (以 5% 計算)：</span><span id="profit5pct">0 楓幣</span></div>
-      <div id="profitAdvice" style="font-size: 13px; margin-top: 8px; font-weight: bold;"></div>
+      <div id="profitAdvice3" style="font-size: 13px; margin-top: 8px; font-weight: bold;"></div>
+      <div id="profitAdvice5" style="font-size: 13px; margin-top: 4px; font-weight: bold;"></div>
     </div>
   </div>
 
@@ -324,7 +325,7 @@
 
     <div style="background:rgba(255,255,255,0.95); padding:15px; border-radius:10px; margin-bottom:15px; border:1px solid #ddd; display:flex; gap:10px; align-items:center;">
       <div style="display:flex; flex-direction:column; white-space:nowrap;">
-        <label style="font-weight:bold; font-size:13px; color:#1f497d;">✏️️ 名稱：</label>
+        <label style="font-weight:bold; font-size:13px; color:#1f497d;">✏ 名稱：</label>
         <span style="font-size:11px; color:#666; font-weight:bold;">（隨便填）</span>
       </div>
       <input type="text" id="expSubTabAuthor" placeholder="例如：小明的測試區" style="flex:1; font-weight:bold; color:#1f497d;">
@@ -849,6 +850,8 @@ window.addEventListener('load', function() {
       document.getElementById('netIncome5pct').innerText = '0 楓幣';
       document.getElementById('profit3pct').innerText = '0 楓幣';
       document.getElementById('profit5pct').innerText = '0 楓幣';
+      document.getElementById('profitAdvice3').innerText = '';
+      document.getElementById('profitAdvice5').innerText = '';
       return;
     }
 
@@ -870,23 +873,43 @@ window.addEventListener('load', function() {
     document.getElementById('totalCost').innerText = formatNumber(totalCost) + ' 楓幣';
     document.getElementById('netIncome3pct').innerText = formatNumber(netIncome3) + ' 楓幣';
     document.getElementById('netIncome5pct').innerText = formatNumber(netIncome5) + ' 楓幣';
+    
     document.getElementById('profit3pct').innerText = formatNumber(profit3) + ' 楓幣';
     document.getElementById('profit5pct').innerText = formatNumber(profit5) + ' 楓幣';
 
-    const profitEl = document.getElementById('profit3pct');
-    const adviceEl = document.getElementById('profitAdvice');
+    const profitEl3 = document.getElementById('profit3pct');
+    const profitEl5 = document.getElementById('profit5pct');
+    const adviceEl3 = document.getElementById('profitAdvice3');
+    const adviceEl5 = document.getElementById('profitAdvice5');
+
+    // 3% 顏色與提示
     if (profit3 > 0 && sellPrice > 0) {
-      profitEl.style.color = '#28a745';
-      adviceEl.innerText = `✅ 預估獲利！3% 純利潤率約 ${((profit3 / sellPrice) * 100).toFixed(1)}%`;
-      adviceEl.style.color = '#28a745';
+      profitEl3.style.color = '#28a745';
+      adviceEl3.innerText = `✅ 預估獲利！3% 純利潤率約 ${((profit3 / sellPrice) * 100).toFixed(1)}%`;
+      adviceEl3.style.color = '#28a745';
     } else if (profit3 < 0) {
-      profitEl.style.color = '#dc3545';
-      adviceEl.innerText = `⚠ 當前價格將虧損 ${formatNumber(Math.abs(profit3))} 楓幣！`;
-      adviceEl.style.color = '#dc3545';
+      profitEl3.style.color = '#dc3545';
+      adviceEl3.innerText = `⚠ 3% 價格將虧損 ${formatNumber(Math.abs(profit3))} 楓幣！`;
+      adviceEl3.style.color = '#dc3545';
     } else {
-      profitEl.style.color = '#6c757d';
-      adviceEl.innerText = '➖ 打平成本';
-      adviceEl.style.color = '#6c757d';
+      profitEl3.style.color = '#6c757d';
+      adviceEl3.innerText = '➖ 3% 打平成本';
+      adviceEl3.style.color = '#6c757d';
+    }
+
+    // 5% 顏色與提示
+    if (profit5 > 0 && sellPrice > 0) {
+      profitEl5.style.color = '#28a745';
+      adviceEl5.innerText = `✅ 預估獲利！5% 純利潤率約 ${((profit5 / sellPrice) * 100).toFixed(1)}%`;
+      adviceEl5.style.color = '#28a745';
+    } else if (profit5 < 0) {
+      profitEl5.style.color = '#dc3545';
+      adviceEl5.innerText = `⚠ 5% 價格將虧損 ${formatNumber(Math.abs(profit5))} 楓幣！`;
+      adviceEl5.style.color = '#dc3545';
+    } else {
+      profitEl5.style.color = '#6c757d';
+      adviceEl5.innerText = '➖ 5% 打平成本';
+      adviceEl5.style.color = '#6c757d';
     }
   }
 
