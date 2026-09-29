@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>楓之谷 母礦連鎖自動成本計算機 v4.8.0 (雲端同步版)</title>
+  <title>楓之谷 母礦連鎖自動成本計算機 v4.8.1 (雲端同步版)</title>
   
   <!-- 引入 Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -230,7 +230,7 @@
 
 <div class="container" id="mainContainer">
   <h2>
-    <span>🍁 楓之谷 母礦連鎖自動成本計算機 v4.8.0</span>
+    <span>🍁 楓之谷 母礦連鎖自動成本計算機 v4.8.1</span>
     <div style="display:flex; gap:8px;">
       <button class="btn-sm btn-secondary" id="btnPrevBg">◀ 側邊上一張</button>
       <button class="btn-sm btn-secondary" id="btnNextBg">側邊下一張 ▶</button>
@@ -245,7 +245,7 @@
 
   <div id="tabContent-calc" class="tab-content active">
     <div class="section-title">
-      <span>1. 輸入基礎「母礦」或「打怪雜物」單價</span>
+      <span>1. 輸入基礎「母礦」或「打怪雜物」單價 (即時連動更新)</span>
       <button class="btn-sm btn-add" id="btnAddRawMat">➕ 新增母礦/打怪雜物</button>
     </div>
     <div class="price-market-grid" id="marketPriceGrid"></div>
@@ -277,7 +277,7 @@
       <button class="btn-sm btn-add" id="btnAddProduct">➕ 新增合成配方</button>
     </div>
     <div style="font-size:12px; color:#555; margin-bottom:10px;">
-      💡 <b>小提示：</b>所有修改會即時同步至雲端，其他裝置開啟也能同步看到！
+      💡 <b>小提示：</b>修改原料價格會自動計算並連動更新相關成品的市場參考價，並同步至雲端！
     </div>
     <div id="productRecipeManageList"></div>
   </div>
@@ -353,13 +353,13 @@ const firebaseConfig = {
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
-const dbRef = db.ref('maple_calculator_v480');
+const dbRef = db.ref('maple_calculator_v481');
 
 window.addEventListener('load', function() {
 
   const ADMIN_USER = "NMIXX";
   const ADMIN_PASS = "0225";
-  let isAdminLoggedIn = sessionStorage.getItem('mp_admin_auth_v480') === 'true';
+  let isAdminLoggedIn = sessionStorage.getItem('mp_admin_auth_v481') === 'true';
 
   const defaultData = {
     rawMaterials: {
@@ -461,6 +461,16 @@ window.addEventListener('load', function() {
     return 0;
   }
 
+  // 自動根據原料與配方計算成本並更新成品的市場參考價
+  function updateDependentProductPrices() {
+    appData.products.forEach(prod => {
+      const calculatedCost = getItemUnitPrice(prod.name);
+      if (calculatedCost > 0) {
+        prod.marketPrice = calculatedCost;
+      }
+    });
+  }
+
   document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.onclick = function() {
       const targetId = this.getAttribute('data-tab');
@@ -473,7 +483,7 @@ window.addEventListener('load', function() {
 
         if (inputUser === ADMIN_USER && inputPass === ADMIN_PASS) {
           isAdminLoggedIn = true;
-          sessionStorage.setItem('mp_admin_auth_v480', 'true');
+          sessionStorage.setItem('mp_admin_auth_v481', 'true');
           alert('管理員登入成功！');
         } else {
           alert('帳號或密碼錯誤，拒絕存取！');
@@ -490,7 +500,7 @@ window.addEventListener('load', function() {
 
   document.getElementById('btnLogoutAdmin').onclick = function() {
     isAdminLoggedIn = false;
-    sessionStorage.removeItem('mp_admin_auth_v480');
+    sessionStorage.removeItem('mp_admin_auth_v481');
     alert('已登出管理員！');
     document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
@@ -524,11 +534,14 @@ window.addEventListener('load', function() {
       `;
     }).join('');
 
+    // 改用 input 事件，讓你邊輸入價格就即時同步更新下方成品參考價與雲端
     document.querySelectorAll('.mat-price-input').forEach(input => {
-      input.onchange = function() {
+      input.oninput = function() {
         appData.rawMaterials[this.getAttribute('data-mat')] = Number(this.value) || 0;
+        updateDependentProductPrices();
         saveDataToCloud();
         onProductChange();
+        renderProductManagement();
       };
     });
 
@@ -739,6 +752,7 @@ window.addEventListener('load', function() {
       const iIdx = Number(e.target.closest('[data-iidx]').getAttribute('data-iidx'));
       p.ingredients[iIdx].name = e.target.value;
     }
+    updateDependentProductPrices();
     saveDataToCloud();
     refreshUI();
   };
@@ -752,11 +766,13 @@ window.addEventListener('load', function() {
       if (confirm(`確定刪除「${p.name}」嗎？`)) { appData.products.splice(pIdx, 1); saveDataToCloud(); refreshUI(); }
     } else if (e.target.classList.contains('p-ing-del-btn')) {
       p.ingredients.splice(Number(e.target.closest('[data-iidx]').getAttribute('data-iidx')), 1);
+      updateDependentProductPrices();
       saveDataToCloud();
       refreshUI();
     } else if (e.target.classList.contains('p-add-ing-btn')) {
       if (!p.ingredients) p.ingredients = [];
       p.ingredients.push({ name: Object.keys(appData.rawMaterials)[0] || "青銅母礦", qty: 1 });
+      updateDependentProductPrices();
       saveDataToCloud();
       refreshUI();
     }
@@ -766,6 +782,7 @@ window.addEventListener('load', function() {
     const name = prompt('請輸入新成品名稱：', '新裝備');
     if (name && name.trim()) {
       appData.products.push({ name: name.trim(), isOreRecipe: false, craftFee: 50000, marketPrice: 0, ingredients: [{ name: "青銅", qty: 1 }] });
+      updateDependentProductPrices();
       saveDataToCloud();
       refreshUI();
     }
@@ -923,7 +940,6 @@ window.addEventListener('load', function() {
     }
   };
 
-  // 本地檔案上傳轉 Base64 支援
   document.getElementById('bgFileInput').onchange = function(e) {
     const file = e.target.files[0];
     if (!file) return;
