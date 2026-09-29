@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>楓之谷 母礦連鎖自動成本計算機 v4.8.0 (雲端同步版)</title>
   
-  <!-- 引入 Firebase SDK (Compat 版本方便快速整合) -->
+  <!-- 引入 Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 
@@ -290,6 +290,10 @@
 
     <div class="section-title">🖼️ 1. 直版側邊相冊管理</div>
     <div class="bg-setting-panel">
+      <div style="margin-bottom: 12px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+        <label style="font-weight:bold;">上傳電腦圖片：</label>
+        <input type="file" id="bgFileInput" accept="image/*" style="flex:1; background:white;">
+      </div>
       <div style="margin-bottom: 12px; display:flex; gap:10px; align-items:center;">
         <label style="font-weight:bold;">圖片網址（雲端）：</label>
         <input type="text" id="bgUrlInput" placeholder="貼上公開圖片網址 http..." style="flex:1;">
@@ -301,6 +305,10 @@
 
     <div class="section-title">🖼️ 2. 橫版頂部大橫幅相冊管理</div>
     <div class="bg-setting-panel">
+      <div style="margin-bottom: 12px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+        <label style="font-weight:bold;">上傳電腦圖片：</label>
+        <input type="file" id="bannerFileInput" accept="image/*" style="flex:1; background:white;">
+      </div>
       <div style="margin-bottom: 12px; display:flex; gap:10px; align-items:center;">
         <label style="font-weight:bold;">圖片網址（雲端）：</label>
         <input type="text" id="bannerUrlInput" placeholder="貼上公開橫版圖片網址 http..." style="flex:1;">
@@ -383,7 +391,6 @@ window.addEventListener('load', function() {
 
   const statusEl = document.getElementById('cloudSyncStatus');
 
-  // 從 Firebase 載入與監聽即時更新
   dbRef.on('value', (snapshot) => {
     const val = snapshot.val();
     if (val) {
@@ -393,7 +400,6 @@ window.addEventListener('load', function() {
       if (!appData.bgImages) appData.bgImages = defaultData.bgImages;
       if (!appData.bannerImages) appData.bannerImages = defaultData.bannerImages;
     } else {
-      // 若雲端為空，初始化預設資料
       dbRef.set(defaultData);
     }
     
@@ -455,7 +461,6 @@ window.addEventListener('load', function() {
     return 0;
   }
 
-  // 分頁切換控制
   document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.onclick = function() {
       const targetId = this.getAttribute('data-tab');
@@ -766,7 +771,6 @@ window.addEventListener('load', function() {
     }
   };
 
-  // 相冊渲染與控制
   function applyGalleries() {
     if (appData.bgImages.length > 0) {
       if (currentBgIndex >= appData.bgImages.length) currentBgIndex = 0;
@@ -917,6 +921,35 @@ window.addEventListener('load', function() {
       applyGalleries();
       input.value = '';
     }
+  };
+
+  // 本地檔案上傳轉 Base64 支援
+  document.getElementById('bgFileInput').onchange = function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(event) {
+      appData.bgImages.push(event.target.result);
+      saveDataToCloud();
+      currentBgIndex = appData.bgImages.length - 1;
+      applyGalleries();
+      e.target.value = '';
+    };
+    reader.readAsDataURL(file);
+  };
+
+  document.getElementById('bannerFileInput').onchange = function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(event) {
+      appData.bannerImages.push(event.target.result);
+      saveDataToCloud();
+      currentBannerIndex = appData.bannerImages.length - 1;
+      applyGalleries();
+      e.target.value = '';
+    };
+    reader.readAsDataURL(file);
   };
 
   function refreshUI() {
