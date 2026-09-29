@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>楓之谷 母礦連鎖自動成本計算機 v4.5</title>
+  <title>楓之谷 母礦連鎖自動成本計算機 v4.6</title>
   <style>
     * { box-sizing: border-box; }
     body {
@@ -14,11 +14,11 @@
       background-color: #1a1a1a;
       min-height: 100vh;
       display: flex;
-      justify-content: center;
-      align-items: flex-start;
+      flex-direction: column;
+      align-items: center;
     }
 
-    /* 左右兩側相冊看板 */
+    /* 左右兩側直版相冊看板 */
     .side-gallery {
       position: fixed;
       top: 50%;
@@ -35,10 +35,10 @@
       align-items: center;
       justify-content: center;
       backdrop-filter: blur(5px);
+      z-index: 10;
     }
     .side-left { left: 25px; }
     .side-right { right: 25px; }
-    
     .side-gallery img {
       max-width: 100%;
       max-height: 100%;
@@ -48,6 +48,50 @@
 
     @media (max-width: 1350px) {
       .side-gallery { display: none; }
+    }
+
+    /* 頂部橫版大橫幅相冊看板 */
+    .top-banner-gallery {
+      width: 100%;
+      max-width: 880px;
+      height: 200px;
+      background: rgba(0, 0, 0, 0.6);
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 20px;
+      backdrop-filter: blur(5px);
+      position: relative;
+    }
+    .top-banner-gallery img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: opacity 0.6s ease-in-out;
+    }
+    .top-banner-controls {
+      position: absolute;
+      bottom: 10px;
+      right: 15px;
+      display: flex;
+      gap: 6px;
+      background: rgba(0,0,0,0.5);
+      padding: 4px 8px;
+      border-radius: 20px;
+      backdrop-filter: blur(4px);
+    }
+    .top-banner-controls button {
+      background: none;
+      border: none;
+      color: white;
+      font-size: 12px;
+      cursor: pointer;
+      font-weight: bold;
+      padding: 2px 6px;
     }
 
     .container {
@@ -60,7 +104,6 @@
       border-radius: 16px;
       box-shadow: 0 10px 30px rgba(0,0,0,0.3);
       backdrop-filter: blur(8px);
-      margin-top: 10px;
       margin-bottom: 20px;
     }
     .tabs {
@@ -129,7 +172,7 @@
     .recipe-card-edit { background: rgba(255, 255, 255, 0.95); border: 1px solid #ddd; padding: 15px; border-radius: 10px; margin-bottom: 12px; }
     .bg-setting-panel { background: rgba(255, 255, 255, 0.9); padding: 15px; border-radius: 10px; margin-bottom: 15px; font-size: 13px; border: 1px solid rgba(0,0,0,0.1); }
     .bg-thumbs { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
-    .bg-thumb-item { position: relative; width: 80px; height: 60px; border-radius: 6px; overflow: hidden; border: 2px solid transparent; }
+    .bg-thumb-item { position: relative; width: 80px; height: 60px; border-radius: 6px; overflow: hidden; border: 2px solid transparent; background: #ddd; }
     .bg-thumb-item.active { border-color: #c55a11; }
     .bg-thumb-item img { width: 100%; height: 100%; object-fit: cover; cursor: pointer; }
     .bg-thumb-del { position: absolute; top: 2px; right: 2px; background: rgba(220,53,69,0.85); color: white; border: none; border-radius: 50%; width: 18px; height: 18px; font-size: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
@@ -137,26 +180,36 @@
 </head>
 <body>
 
+<!-- 左右兩側直版相冊 -->
 <div class="side-gallery side-left">
-  <img id="leftGalleryImg" src="" alt="左側相冊">
+  <img id="leftGalleryImg" src="" alt="左側直版相冊">
 </div>
 <div class="side-gallery side-right">
-  <img id="rightGalleryImg" src="" alt="右側相冊">
+  <img id="rightGalleryImg" src="" alt="右側直版相冊">
+</div>
+
+<!-- 頂部橫版大橫幅相冊 -->
+<div class="top-banner-gallery">
+  <img id="topBannerImg" src="" alt="頂部橫版相冊">
+  <div class="top-banner-controls">
+    <button id="btnPrevBanner">◀ 上一張</button>
+    <button id="btnNextBanner">下一張 ▶</button>
+  </div>
 </div>
 
 <div class="container" id="mainContainer">
   <h2>
-    <span>🍁 楓之谷 母礦連鎖自動成本計算機 v4.5</span>
+    <span>🍁 楓之谷 母礦連鎖自動成本計算機 v4.6</span>
     <div style="display:flex; gap:8px;">
-      <button class="btn-sm btn-secondary" id="btnPrevBg">◀ 上一張</button>
-      <button class="btn-sm btn-secondary" id="btnNextBg">下一張 ▶</button>
+      <button class="btn-sm btn-secondary" id="btnPrevBg">◀ 側邊上一張</button>
+      <button class="btn-sm btn-secondary" id="btnNextBg">側邊下一張 ▶</button>
     </div>
   </h2>
 
   <div class="tabs">
     <button class="tab-btn active" data-tab="tabContent-calc">🧮 快速選成品計算</button>
     <button class="tab-btn" data-tab="tabContent-recipe">📜 管理成品與合成配方</button>
-    <button class="tab-btn" data-tab="tabContent-settings">⚙️ 設定與側邊相冊</button>
+    <button class="tab-btn" data-tab="tabContent-settings">⚙️ 設定與雙相冊管理</button>
   </div>
 
   <div id="tabContent-calc" class="tab-content active">
@@ -201,24 +254,43 @@
   </div>
 
   <div id="tabContent-settings" class="tab-content">
-    <div class="section-title">🖼️ 側邊相冊多圖管理 (完整顯示不裁切)</div>
+    <div style="background:#fff3cd; padding:10px 15px; border-radius:8px; font-size:13px; margin-bottom:15px; border:1px solid #ffeeba; color:#856404;">
+      🌐 <b>跨裝置同步提示：</b>若要讓「所有裝置（別人的手機或電腦）」點進來都看到你設定的圖片，請使用 **「雲端圖片網址」**（貼入公開的圖片直連網址）。如果使用「批量上傳檔案」，圖片只會存放在你當下的瀏覽器中。
+    </div>
+
+    <div class="section-title">🖼️ 1. 直版側邊相冊管理（適合直式照片）</div>
     <div class="bg-setting-panel">
       <div style="margin-bottom: 12px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-        <label style="font-weight:bold;">1. 批量上傳照片：</label>
+        <label style="font-weight:bold;">批量上傳（本機）：</label>
         <input type="file" id="bgBatchFileInput" accept="image/*" multiple>
       </div>
       <div style="margin-bottom: 12px; display:flex; gap:10px; align-items:center;">
-        <label style="font-weight:bold;">2. 圖片網址：</label>
-        <input type="text" id="bgUrlInput" placeholder="貼上網址 http..." style="flex:1;">
+        <label style="font-weight:bold;">圖片網址（雲端）：</label>
+        <input type="text" id="bgUrlInput" placeholder="貼上公開圖片網址 http..." style="flex:1;">
         <button class="btn-sm btn-secondary" id="btnAddBgUrl">新增網址</button>
       </div>
-      <div style="font-weight:bold; margin-top:10px;">目前相冊（點擊可直接切換）：</div>
+      <div style="font-weight:bold; margin-top:10px;">目前直版相冊清單：</div>
       <div class="bg-thumbs" id="bgThumbsContainer"></div>
     </div>
 
-    <div class="section-title">🎞️ 側邊相冊自動輪播設定</div>
+    <div class="section-title">🖼️ 2. 橫版頂部大橫幅相冊管理（適合橫式照片）</div>
     <div class="bg-setting-panel">
-      <div style="margin-bottom: 12px; display:flex; align-items:center; gap:15px;">
+      <div style="margin-bottom: 12px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+        <label style="font-weight:bold;">批量上傳（本機）：</label>
+        <input type="file" id="bannerBatchFileInput" accept="image/*" multiple>
+      </div>
+      <div style="margin-bottom: 12px; display:flex; gap:10px; align-items:center;">
+        <label style="font-weight:bold;">圖片網址（雲端）：</label>
+        <input type="text" id="bannerUrlInput" placeholder="貼上公開橫版圖片網址 http..." style="flex:1;">
+        <button class="btn-sm btn-secondary" id="btnAddBannerUrl">新增橫版網址</button>
+      </div>
+      <div style="font-weight:bold; margin-top:10px;">目前橫版相冊清單：</div>
+      <div class="bg-thumbs" id="bannerThumbsContainer"></div>
+    </div>
+
+    <div class="section-title">🎞️ 相冊自動輪播設定</div>
+    <div class="bg-setting-panel">
+      <div style="margin-bottom: 12px; display:flex; align-items:center; gap:15px; flex-wrap:wrap;">
         <label style="font-weight:bold; cursor:pointer;">
           <input type="checkbox" id="slideshowToggle"> 啟用自動輪播相冊
         </label>
@@ -258,28 +330,36 @@ window.addEventListener('load', function() {
 
   let rawMaterials = {};
   let products = [];
+  
+  // 直版與橫版圖片陣列
   let bgImages = ["https://images.unsplash.com/photo-1511447333015-45b65e60f6d5?auto=format&fit=crop&w=600&q=80"];
+  let bannerImages = ["https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=1200&q=80"];
+  
   let currentBgIndex = 0;
+  let currentBannerIndex = 0;
   let slideshowActive = false;
   let slideshowTime = 10000;
   let slideshowTimer = null;
 
   try {
-    const savedRaws = localStorage.getItem('mp_raw_prices_v45');
+    const savedRaws = localStorage.getItem('mp_raw_prices_v46');
     if (savedRaws) rawMaterials = JSON.parse(savedRaws);
     else rawMaterials = { ...defaultRawMaterials };
 
-    const savedProds = localStorage.getItem('mp_products_v45');
+    const savedProds = localStorage.getItem('mp_products_v46');
     if (savedProds) products = JSON.parse(savedProds);
     else products = JSON.parse(JSON.stringify(defaultProducts));
 
-    const savedBgs = localStorage.getItem('mp_bg_list_v45');
+    const savedBgs = localStorage.getItem('mp_bg_list_v46');
     if (savedBgs) bgImages = JSON.parse(savedBgs);
 
-    const savedSs = localStorage.getItem('mp_slideshow_active_v45');
+    const savedBanners = localStorage.getItem('mp_banner_list_v46');
+    if (savedBanners) bannerImages = JSON.parse(savedBanners);
+
+    const savedSs = localStorage.getItem('mp_slideshow_active_v46');
     if (savedSs !== null) slideshowActive = JSON.parse(savedSs);
 
-    const savedSsTime = localStorage.getItem('mp_slideshow_time_v45');
+    const savedSsTime = localStorage.getItem('mp_slideshow_time_v46');
     if (savedSsTime) slideshowTime = Number(savedSsTime);
   } catch (e) {
     rawMaterials = { ...defaultRawMaterials };
@@ -304,11 +384,12 @@ window.addEventListener('load', function() {
 
   function saveData() {
     try {
-      localStorage.setItem('mp_raw_prices_v45', JSON.stringify(rawMaterials));
-      localStorage.setItem('mp_products_v45', JSON.stringify(products));
-      localStorage.setItem('mp_bg_list_v45', JSON.stringify(bgImages));
-      localStorage.setItem('mp_slideshow_active_v45', JSON.stringify(slideshowActive));
-      localStorage.setItem('mp_slideshow_time_v45', slideshowTime);
+      localStorage.setItem('mp_raw_prices_v46', JSON.stringify(rawMaterials));
+      localStorage.setItem('mp_products_v46', JSON.stringify(products));
+      localStorage.setItem('mp_bg_list_v46', JSON.stringify(bgImages));
+      localStorage.setItem('mp_banner_list_v46', JSON.stringify(bannerImages));
+      localStorage.setItem('mp_slideshow_active_v46', JSON.stringify(slideshowActive));
+      localStorage.setItem('mp_slideshow_time_v46', slideshowTime);
     } catch(e) {}
   }
 
@@ -531,7 +612,6 @@ window.addEventListener('load', function() {
     `).join('');
   }
 
-  // 關鍵改善：改用 onchange，讓你在輸入中文時不會中斷或頻繁重繪畫面
   document.getElementById('productRecipeManageList').onchange = function(e) {
     const card = e.target.closest('.recipe-card-edit');
     if (!card) return;
@@ -589,39 +669,66 @@ window.addEventListener('load', function() {
     }
   };
 
-  function applySideGalleryImages() {
+  // 相冊渲染與控制
+  function applyGalleries() {
     if (bgImages.length > 0) {
       if (currentBgIndex >= bgImages.length) currentBgIndex = 0;
-      const currentImgUrl = bgImages[currentBgIndex];
-      document.getElementById('leftGalleryImg').src = currentImgUrl;
-      document.getElementById('rightGalleryImg').src = currentImgUrl;
+      const url = bgImages[currentBgIndex];
+      document.getElementById('leftGalleryImg').src = url;
+      document.getElementById('rightGalleryImg').src = url;
     }
     renderBgThumbs();
+
+    if (bannerImages.length > 0) {
+      if (currentBannerIndex >= bannerImages.length) currentBannerIndex = 0;
+      const bannerUrl = bannerImages[currentBannerIndex];
+      document.getElementById('topBannerImg').src = bannerUrl;
+    }
+    renderBannerThumbs();
   }
 
   function nextBg() {
     if (bgImages.length > 0) {
       currentBgIndex = (currentBgIndex + 1) % bgImages.length;
-      applySideGalleryImages();
+      applyGalleries();
     }
   }
 
   function prevBg() {
     if (bgImages.length > 0) {
       currentBgIndex = (currentBgIndex - 1 + bgImages.length) % bgImages.length;
-      applySideGalleryImages();
+      applyGalleries();
+    }
+  }
+
+  function nextBanner() {
+    if (bannerImages.length > 0) {
+      currentBannerIndex = (currentBannerIndex + 1) % bannerImages.length;
+      applyGalleries();
+    }
+  }
+
+  function prevBanner() {
+    if (bannerImages.length > 0) {
+      currentBannerIndex = (currentBannerIndex - 1 + bannerImages.length) % bannerImages.length;
+      applyGalleries();
     }
   }
 
   function updateSlideshowTimer() {
     if (slideshowTimer) clearInterval(slideshowTimer);
     if (slideshowActive) {
-      slideshowTimer = setInterval(nextBg, slideshowTime);
+      slideshowTimer = setInterval(() => {
+        nextBg();
+        nextBanner();
+      }, slideshowTime);
     }
   }
 
   document.getElementById('btnNextBg').onclick = nextBg;
   document.getElementById('btnPrevBg').onclick = prevBg;
+  document.getElementById('btnNextBanner').onclick = nextBanner;
+  document.getElementById('btnPrevBanner').onclick = prevBanner;
 
   const ssToggle = document.getElementById('slideshowToggle');
   ssToggle.checked = slideshowActive;
@@ -643,26 +750,54 @@ window.addEventListener('load', function() {
     const container = document.getElementById('bgThumbsContainer');
     container.innerHTML = bgImages.map((img, idx) => `
       <div class="bg-thumb-item ${idx === currentBgIndex ? 'active' : ''}" data-idx="${idx}">
-        <img src="${img}" alt="相冊預覽">
+        <img src="${img}" alt="直版縮圖">
         <button class="bg-thumb-del" data-idx="${idx}">✕</button>
       </div>
     `).join('');
 
-    document.querySelectorAll('.bg-thumb-item').forEach(el => {
+    container.querySelectorAll('.bg-thumb-item').forEach(el => {
       el.onclick = function(e) {
         if (e.target.tagName !== 'BUTTON') {
           currentBgIndex = Number(this.getAttribute('data-idx'));
-          applySideGalleryImages();
+          applyGalleries();
         }
       };
     });
 
-    document.querySelectorAll('.bg-thumb-del').forEach(el => {
+    container.querySelectorAll('.bg-thumb-del').forEach(el => {
       el.onclick = function(e) {
         e.stopPropagation();
         bgImages.splice(Number(this.getAttribute('data-idx')), 1);
         saveData();
-        applySideGalleryImages();
+        applyGalleries();
+      };
+    });
+  }
+
+  function renderBannerThumbs() {
+    const container = document.getElementById('bannerThumbsContainer');
+    container.innerHTML = bannerImages.map((img, idx) => `
+      <div class="bg-thumb-item ${idx === currentBannerIndex ? 'active' : ''}" data-idx="${idx}">
+        <img src="${img}" alt="橫版縮圖">
+        <button class="bg-thumb-del" data-idx="${idx}">✕</button>
+      </div>
+    `).join('');
+
+    container.querySelectorAll('.bg-thumb-item').forEach(el => {
+      el.onclick = function(e) {
+        if (e.target.tagName !== 'BUTTON') {
+          currentBannerIndex = Number(this.getAttribute('data-idx'));
+          applyGalleries();
+        }
+      };
+    });
+
+    container.querySelectorAll('.bg-thumb-del').forEach(el => {
+      el.onclick = function(e) {
+        e.stopPropagation();
+        bannerImages.splice(Number(this.getAttribute('data-idx')), 1);
+        saveData();
+        applyGalleries();
       };
     });
   }
@@ -673,7 +808,18 @@ window.addEventListener('load', function() {
       bgImages.push(input.value.trim());
       saveData();
       currentBgIndex = bgImages.length - 1;
-      applySideGalleryImages();
+      applyGalleries();
+      input.value = '';
+    }
+  };
+
+  document.getElementById('btnAddBannerUrl').onclick = function() {
+    const input = document.getElementById('bannerUrlInput');
+    if (input.value.trim()) {
+      bannerImages.push(input.value.trim());
+      saveData();
+      currentBannerIndex = bannerImages.length - 1;
+      applyGalleries();
       input.value = '';
     }
   };
@@ -689,7 +835,26 @@ window.addEventListener('load', function() {
           if (loaded === this.files.length) {
             saveData();
             currentBgIndex = bgImages.length - 1;
-            applySideGalleryImages();
+            applyGalleries();
+          }
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+  };
+
+  document.getElementById('bannerBatchFileInput').onchange = function() {
+    if (this.files && this.files.length > 0) {
+      let loaded = 0;
+      Array.from(this.files).forEach(file => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          bannerImages.push(e.target.result);
+          loaded++;
+          if (loaded === this.files.length) {
+            saveData();
+            currentBannerIndex = bannerImages.length - 1;
+            applyGalleries();
           }
         };
         reader.readAsDataURL(file);
@@ -701,7 +866,7 @@ window.addEventListener('load', function() {
   renderProductDropdown();
   renderProductManagement();
   onProductChange();
-  applySideGalleryImages();
+  applyGalleries();
   updateSlideshowTimer();
 });
 </script>
