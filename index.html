@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>楓之谷 母礦連鎖自動成本計算機 v4.2</title>
+  <title>楓之谷 母礦連鎖自動成本計算機 v4.3</title>
   <style>
     * { box-sizing: border-box; }
     body {
@@ -12,10 +12,13 @@
       margin: 0;
       color: #222;
       background-color: #111;
+      /* 關鍵：讓背景圖片等比例填滿且不變形、永遠置中 */
       background-size: cover;
       background-position: center;
       background-attachment: fixed;
+      background-repeat: no-repeat;
       min-height: 100vh;
+      transition: background-image 0.8s ease-in-out; /* 切換背景時有漂亮的漸變特效 */
     }
     .overlay {
       position: fixed;
@@ -61,7 +64,7 @@
     .tab-content { display: none; }
     .tab-content.active { display: block !important; }
 
-    h2 { margin-top: 0; color: #c55a11; display: flex; justify-content: space-between; align-items: center; font-size: 22px; }
+    h2 { margin-top: 0; color: #c55a11; display: flex; justify-content: space-between; align-items: center; font-size: 22px; flex-wrap: wrap; gap: 10px; }
     .section-title {
       font-weight: bold; margin-top: 20px; margin-bottom: 12px; color: #1f497d; font-size: 16px;
       border-left: 4px solid #1f497d; padding-left: 8px; display: flex; justify-content: space-between; align-items: center;
@@ -113,8 +116,11 @@
 
 <div class="container" id="mainContainer">
   <h2>
-    <span>🍁 楓之谷 母礦連鎖自動成本計算機 v4.2</span>
-    <button class="btn-sm btn-secondary" id="btnNextBg">📷 換背景照片</button>
+    <span>🍁 楓之谷 母礦連鎖自動成本計算機 v4.3</span>
+    <div style="display:flex; gap:8px;">
+      <button class="btn-sm btn-secondary" id="btnPrevBg">◀ 上一張</button>
+      <button class="btn-sm btn-secondary" id="btnNextBg">下一張 ▶</button>
+    </div>
   </h2>
 
   <!-- 頂端頁籤切換 -->
@@ -167,12 +173,12 @@
     <div id="productRecipeManageList"></div>
   </div>
 
-  <!-- 分頁 3: 背景設定 -->
+  <!-- 分頁 3: 背景設定與幻燈片 -->
   <div id="tabContent-settings" class="tab-content">
-    <div class="section-title">🖼️ 背景圖多張相冊 (可批量上傳 / 網址)</div>
+    <div class="section-title">🖼️ 背景圖多張相冊 (自動適應比例不變形)</div>
     <div class="bg-setting-panel">
-      <div style="margin-bottom: 12px; display:flex; gap:10px; align-items:center;">
-        <label style="font-weight:bold;">1. 選擇電腦照片：</label>
+      <div style="margin-bottom: 12px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+        <label style="font-weight:bold;">1. 批量上傳照片：</label>
         <input type="file" id="bgBatchFileInput" accept="image/*" multiple>
       </div>
       <div style="margin-bottom: 12px; display:flex; gap:10px; align-items:center;">
@@ -180,8 +186,26 @@
         <input type="text" id="bgUrlInput" placeholder="貼上網址 http..." style="flex:1;">
         <button class="btn-sm btn-secondary" id="btnAddBgUrl">新增網址</button>
       </div>
-      <div style="font-weight:bold; margin-top:10px;">目前相冊：</div>
+      <div style="font-weight:bold; margin-top:10px;">目前相冊（點擊可直接切換）：</div>
       <div class="bg-thumbs" id="bgThumbsContainer"></div>
+    </div>
+
+    <div class="section-title">🎞️ 背景自動幻燈片輪播設定</div>
+    <div class="bg-setting-panel">
+      <div style="margin-bottom: 12px; display:flex; align-items:center; gap:15px;">
+        <label style="font-weight:bold; cursor:pointer;">
+          <input type="checkbox" id="slideshowToggle"> 啟用自動輪播背景
+        </label>
+        <div>
+          切換間隔：
+          <select id="slideshowInterval" style="width:110px; display:inline-block;">
+            <option value="5000">每 5 秒</option>
+            <option value="10000" selected>每 10 秒</option>
+            <option value="30000">每 30 秒</option>
+            <option value="60000">每 1 分鐘</option>
+          </select>
+        </div>
+      </div>
     </div>
 
     <div class="section-title">✨ 照片清晰度與透明度調節</div>
@@ -203,7 +227,6 @@
 <script>
 window.addEventListener('load', function() {
 
-  // 預設資料
   const defaultRawMaterials = {
     "青銅母礦": 4500,
     "鋼鐵母礦": 5000,
@@ -252,27 +275,28 @@ window.addEventListener('load', function() {
   let products = [];
   let bgImages = ["https://images.unsplash.com/photo-1511447333015-45b65e60f6d5?auto=format&fit=crop&w=1920&q=80"];
   let currentBgIndex = 0;
+  let slideshowActive = false;
+  let slideshowTime = 10000;
+  let slideshowTimer = null;
 
-  // 資料防遺失機制：讀取舊資料並與預設值智慧合併（不會覆蓋你的自訂設定）
   try {
     const savedRaws = localStorage.getItem('mp_raw_prices_v4');
-    if (savedRaws) {
-      rawMaterials = JSON.parse(savedRaws);
-    } else {
-      rawMaterials = { ...defaultRawMaterials };
-    }
+    if (savedRaws) rawMaterials = JSON.parse(savedRaws);
+    else rawMaterials = { ...defaultRawMaterials };
 
     const savedProds = localStorage.getItem('mp_products_v4');
-    if (savedProds) {
-      products = JSON.parse(savedProds);
-    } else {
-      products = JSON.parse(JSON.stringify(defaultProducts));
-    }
+    if (savedProds) products = JSON.parse(savedProds);
+    else products = JSON.parse(JSON.stringify(defaultProducts));
 
     const savedBgs = localStorage.getItem('mp_bg_list_v4');
     if (savedBgs) bgImages = JSON.parse(savedBgs);
+
+    const savedSs = localStorage.getItem('mp_slideshow_active');
+    if (savedSs !== null) slideshowActive = JSON.parse(savedSs);
+
+    const savedSsTime = localStorage.getItem('mp_slideshow_time');
+    if (savedSsTime) slideshowTime = Number(savedSsTime);
   } catch (e) {
-    console.warn("Storage load error:", e);
     rawMaterials = { ...defaultRawMaterials };
     products = JSON.parse(JSON.stringify(defaultProducts));
   }
@@ -298,13 +322,13 @@ window.addEventListener('load', function() {
       localStorage.setItem('mp_raw_prices_v4', JSON.stringify(rawMaterials));
       localStorage.setItem('mp_products_v4', JSON.stringify(products));
       localStorage.setItem('mp_bg_list_v4', JSON.stringify(bgImages));
+      localStorage.setItem('mp_slideshow_active', JSON.stringify(slideshowActive));
+      localStorage.setItem('mp_slideshow_time', slideshowTime);
     } catch(e) {}
   }
 
   function getItemUnitPrice(itemName) {
-    if (itemName in rawMaterials) {
-      return rawMaterials[itemName];
-    }
+    if (itemName in rawMaterials) return rawMaterials[itemName];
     const prod = products.find(p => p.name === itemName);
     if (prod && prod.isOreRecipe) {
       const oreP = rawMaterials[prod.oreName] || 0;
@@ -313,9 +337,7 @@ window.addEventListener('load', function() {
     if (prod && !prod.isOreRecipe) {
       let cost = prod.craftFee || 0;
       if (prod.ingredients) {
-        prod.ingredients.forEach(ing => {
-          cost += getItemUnitPrice(ing.name) * ing.qty;
-        });
+        prod.ingredients.forEach(ing => { cost += getItemUnitPrice(ing.name) * ing.qty; });
       }
       return cost;
     }
@@ -333,7 +355,7 @@ window.addEventListener('load', function() {
     };
   });
 
-  // 1. 渲染第一頁母礦與打怪雜物行情（支援手動新增與刪除雜物）
+  // 1. 市場行情
   function renderMarketGrid() {
     syncRawMaterials();
     const grid = document.getElementById('marketPriceGrid');
@@ -345,7 +367,6 @@ window.addEventListener('load', function() {
     }
 
     grid.innerHTML = keys.map(mat => {
-      // 檢查是否被任何配方使用中
       const isUsed = products.some(p => 
         (p.isOreRecipe && p.oreName === mat) || 
         (!p.isOreRecipe && p.ingredients && p.ingredients.some(ing => ing.name === mat))
@@ -363,18 +384,15 @@ window.addEventListener('load', function() {
 
     document.querySelectorAll('.mat-price-input').forEach(input => {
       input.oninput = function() {
-        const mat = this.getAttribute('data-mat');
-        rawMaterials[mat] = Number(this.value) || 0;
+        rawMaterials[this.getAttribute('data-mat')] = Number(this.value) || 0;
         saveData();
         onProductChange();
       };
     });
 
-    // 刪除未使用的手動雜物
     document.querySelectorAll('.mat-del-btn').forEach(btn => {
       btn.onclick = function() {
-        const item = this.closest('.price-item');
-        const mat = item.getAttribute('data-mat');
+        const mat = this.closest('.price-item').getAttribute('data-mat');
         if (confirm(`確定要刪除雜物「${mat}」嗎？`)) {
           delete rawMaterials[mat];
           saveData();
@@ -400,7 +418,7 @@ window.addEventListener('load', function() {
     }
   };
 
-  // 2. 第一頁：成品選單與連鎖計算
+  // 2. 計算機選單
   function renderProductDropdown() {
     const select = document.getElementById('productSelect');
     if (products.length === 0) {
@@ -414,10 +432,7 @@ window.addEventListener('load', function() {
   function onProductChange() {
     const select = document.getElementById('productSelect');
     const idx = select.value;
-    if (idx === "" || !products[idx]) {
-      calculate();
-      return;
-    }
+    if (idx === "" || !products[idx]) { calculate(); return; }
 
     const product = products[idx];
     const box = document.getElementById('recipeDetailsBox');
@@ -427,38 +442,20 @@ window.addEventListener('load', function() {
       const unitCost = (oreP * 10) + (product.craftFee || 300);
       box.innerHTML = `
         <div style="font-weight:bold; color:#1f497d; margin-bottom:4px;">⛏️ 母礦煉製公式：</div>
-        <div class="recipe-item">
-          <span>• 10 個 ${product.oreName} (${oreP.toLocaleString()} × 10)</span>
-          <span>${(oreP * 10).toLocaleString()} 楓幣</span>
-        </div>
-        <div class="recipe-item" style="color:#c55a11; font-weight:bold;">
-          <span>• 合成手續費</span>
-          <span>${(product.craftFee || 300).toLocaleString()} 楓幣</span>
-        </div>
-        <div style="margin-top:6px; font-weight:bold; color:#2e75b6; text-align:right;">
-          合成 1 個 ${product.name} 總成本 = ${unitCost.toLocaleString()} 楓幣
-        </div>
+        <div class="recipe-item"><span>• 10 個 ${product.oreName}</span><span>${(oreP * 10).toLocaleString()} 楓幣</span></div>
+        <div class="recipe-item" style="color:#c55a11; font-weight:bold;"><span>• 合成手續費</span><span>${(product.craftFee || 300).toLocaleString()} 楓幣</span></div>
+        <div style="margin-top:6px; font-weight:bold; color:#2e75b6; text-align:right;">總成本 = ${unitCost.toLocaleString()} 楓幣</div>
       `;
     } else {
       box.innerHTML = `
         <div style="font-weight:bold; margin-bottom:6px; color:#1f497d;">📋 裝備組裝配方需求：</div>
         ${(product.ingredients || []).map(ing => {
           const unitPrice = getItemUnitPrice(ing.name);
-          const subtotal = unitPrice * ing.qty;
-          return `
-            <div class="recipe-item">
-              <span>• ${ing.name} x${ing.qty} 個</span>
-              <span>單價: ${unitPrice.toLocaleString()} 楓幣 (小計: ${subtotal.toLocaleString()})</span>
-            </div>
-          `;
+          return `<div class="recipe-item"><span>• ${ing.name} x${ing.qty} 個</span><span>單價: ${unitPrice.toLocaleString()} (小計: ${(unitPrice * ing.qty).toLocaleString()})</span></div>`;
         }).join('')}
-        <div class="recipe-item" style="color:#c55a11; font-weight:bold;">
-          <span>• NPC 製作費</span>
-          <span>${(product.craftFee||0).toLocaleString()} 楓幣</span>
-        </div>
+        <div class="recipe-item" style="color:#c55a11; font-weight:bold;"><span>• NPC 製作費</span><span>${(product.craftFee||0).toLocaleString()} 楓幣</span></div>
       `;
     }
-
     calculate();
   }
 
@@ -476,18 +473,9 @@ window.addEventListener('load', function() {
     }
 
     const product = products[idx];
-    let totalCost = 0;
-
-    if (product.isOreRecipe) {
-      const oreP = rawMaterials[product.oreName] || 0;
-      totalCost = (oreP * 10) + (product.craftFee || 300);
-    } else {
-      totalCost = product.craftFee || 0;
-      if (product.ingredients) {
-        product.ingredients.forEach(ing => {
-          totalCost += getItemUnitPrice(ing.name) * ing.qty;
-        });
-      }
+    let totalCost = product.isOreRecipe ? ((rawMaterials[product.oreName] || 0) * 10) + (product.craftFee || 300) : (product.craftFee || 0);
+    if (!product.isOreRecipe && product.ingredients) {
+      product.ingredients.forEach(ing => { totalCost += getItemUnitPrice(ing.name) * ing.qty; });
     }
 
     const sellPrice = Number(document.getElementById('sellPrice').value) || 0;
@@ -500,11 +488,9 @@ window.addEventListener('load', function() {
 
     const profitEl = document.getElementById('profit');
     const adviceEl = document.getElementById('profitAdvice');
-
     if (profit > 0) {
       profitEl.style.color = '#28a745';
-      const margin = sellPrice > 0 ? ((profit / sellPrice) * 100).toFixed(1) : 0;
-      adviceEl.innerText = `✅ 預估獲利！純利潤率約 ${margin}%`;
+      adviceEl.innerText = `✅ 預估獲利！純利潤率約 ${((profit / sellPrice) * 100).toFixed(1)}%`;
       adviceEl.style.color = '#28a745';
     } else if (profit < 0) {
       profitEl.style.color = '#dc3545';
@@ -517,7 +503,7 @@ window.addEventListener('load', function() {
     }
   }
 
-  // 3. 第二頁：配方管理（使用事件委派）
+  // 3. 配方管理
   function renderProductManagement() {
     syncRawMaterials();
     const container = document.getElementById('productRecipeManageList');
@@ -527,45 +513,38 @@ window.addEventListener('load', function() {
     container.innerHTML = products.map((p, pIdx) => `
       <div class="recipe-card-edit" data-pidx="${pIdx}">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-          <div>
-            <label style="font-size:12px; font-weight:bold; color:#666;">項目名稱：</label>
-            <input type="text" value="${p.name}" class="p-name-in" style="font-weight:bold; font-size:16px; width:180px;">
-          </div>
-          <button class="btn-sm btn-danger p-del-btn">🗑️ 刪除此項目</button>
+          <input type="text" value="${p.name}" class="p-name-in" style="font-weight:bold; font-size:16px; width:180px;">
+          <button class="btn-sm btn-danger p-del-btn">🗑️ 刪除</button>
         </div>
-
-        <div style="margin-bottom:10px; font-size:13px; display:flex; align-items:center; gap:10px;">
+        <div style="margin-bottom:10px; font-size:13px;">
           <label style="cursor:pointer; font-weight:bold; color:#c55a11;">
-            <input type="checkbox" class="p-isore-cb" ${p.isOreRecipe ? 'checked' : ''}> 
-            是否為「10個母礦 + 合成費」煉製物？
+            <input type="checkbox" class="p-isore-cb" ${p.isOreRecipe ? 'checked' : ''}> 母礦煉製物
           </label>
         </div>
-
         ${p.isOreRecipe ? `
           <div style="background:#f1f3f5; padding:10px; border-radius:6px; font-size:13px;">
-            所須母礦：
-            <select class="p-orename-select" style="width:140px; display:inline-block; margin-right:10px;">
+            母礦：<select class="p-orename-select" style="width:130px; display:inline-block; margin-right:10px;">
               ${allMatKeys.map(mat => `<option value="${mat}" ${mat === p.oreName ? 'selected' : ''}>${mat}</option>`).join('')}
             </select>
-            合成手續費：<input type="number" value="${p.craftFee || 300}" class="p-orefee-in" style="width:100px; display:inline-block;"> 楓幣
+            手續費：<input type="number" value="${p.craftFee || 300}" class="p-orefee-in" style="width:90px; display:inline-block;">
           </div>
         ` : `
           <div style="font-size:13px; margin-bottom:8px;">
-            NPC 製作手續費：<input type="number" value="${p.craftFee || 0}" class="p-fee-in" style="width:120px;"> 楓幣
+            製作費：<input type="number" value="${p.craftFee || 0}" class="p-fee-in" style="width:110px;"> 楓幣
           </div>
-          <div style="font-weight:bold; font-size:13px; margin-bottom:6px; color:#1f497d;">組裝材料需求：</div>
+          <div style="font-weight:bold; font-size:13px; margin-bottom:6px; color:#1f497d;">材料需求：</div>
           <div class="ingredients-list">
             ${(p.ingredients || []).map((ing, iIdx) => `
               <div style="display:flex; gap:8px; margin-bottom:6px; align-items:center;" data-iidx="${iIdx}">
                 <select class="p-ing-mat-select" style="flex:1;">
                   ${allItemNames.map(mat => `<option value="${mat}" ${mat === ing.name ? 'selected' : ''}>${mat}</option>`).join('')}
                 </select>
-                <input type="number" value="${ing.qty}" class="p-ing-qty-in" style="width:90px;" placeholder="數量"> 個
-                <button class="btn-sm btn-danger p-ing-del-btn">✕ 刪除</button>
+                <input type="number" value="${ing.qty}" class="p-ing-qty-in" style="width:80px;">個
+                <button class="btn-sm btn-danger p-ing-del-btn">✕</button>
               </div>
             `).join('')}
           </div>
-          <button class="btn-sm btn-add p-add-ing-btn" style="margin-top:6px;">➕ 新增材料需求</button>
+          <button class="btn-sm btn-add p-add-ing-btn" style="margin-top:4px;">➕ 新增材料</button>
         `}
       </div>
     `).join('');
@@ -574,49 +553,30 @@ window.addEventListener('load', function() {
   document.getElementById('productRecipeManageList').oninput = function(e) {
     const card = e.target.closest('.recipe-card-edit');
     if (!card) return;
-    const pIdx = Number(card.getAttribute('data-pidx'));
-    const p = products[pIdx];
-
-    if (e.target.classList.contains('p-name-in')) {
-      p.name = e.target.value;
-      saveProductsUI();
-    } else if (e.target.classList.contains('p-orefee-in') || e.target.classList.contains('p-fee-in')) {
-      p.craftFee = Number(e.target.value) || 0;
-      saveProductsUI();
-    } else if (e.target.classList.contains('p-ing-qty-in')) {
-      const row = e.target.closest('[data-iidx]');
-      const iIdx = Number(row.getAttribute('data-iidx'));
+    const p = products[Number(card.getAttribute('data-pidx'))];
+    if (e.target.classList.contains('p-name-in')) p.name = e.target.value;
+    else if (e.target.classList.contains('p-orefee-in') || e.target.classList.contains('p-fee-in')) p.craftFee = Number(e.target.value) || 0;
+    else if (e.target.classList.contains('p-ing-qty-in')) {
+      const iIdx = Number(e.target.closest('[data-iidx]').getAttribute('data-iidx'));
       p.ingredients[iIdx].qty = Number(e.target.value) || 0;
-      saveProductsUI();
     }
+    saveProductsUI();
   };
 
   document.getElementById('productRecipeManageList').onchange = function(e) {
     const card = e.target.closest('.recipe-card-edit');
     if (!card) return;
-    const pIdx = Number(card.getAttribute('data-pidx'));
-    const p = products[pIdx];
-
+    const p = products[Number(card.getAttribute('data-pidx'))];
     if (e.target.classList.contains('p-isore-cb')) {
       p.isOreRecipe = e.target.checked;
-      if (p.isOreRecipe) {
-        p.oreName = Object.keys(rawMaterials)[0] || "青銅母礦";
-        p.craftFee = 300;
-        p.ingredients = [];
-      } else {
-        p.craftFee = 50000;
-        p.ingredients = [{ name: "青銅", qty: 1 }];
-      }
-      saveProductsUI();
-    } else if (e.target.classList.contains('p-orename-select')) {
-      p.oreName = e.target.value;
-      saveProductsUI();
-    } else if (e.target.classList.contains('p-ing-mat-select')) {
-      const row = e.target.closest('[data-iidx]');
-      const iIdx = Number(row.getAttribute('data-iidx'));
+      if (p.isOreRecipe) { p.oreName = Object.keys(rawMaterials)[0] || "青銅母礦"; p.craftFee = 300; p.ingredients = []; }
+      else { p.craftFee = 50000; p.ingredients = [{ name: "青銅", qty: 1 }]; }
+    } else if (e.target.classList.contains('p-orename-select')) p.oreName = e.target.value;
+    else if (e.target.classList.contains('p-ing-mat-select')) {
+      const iIdx = Number(e.target.closest('[data-iidx]').getAttribute('data-iidx'));
       p.ingredients[iIdx].name = e.target.value;
-      saveProductsUI();
     }
+    saveProductsUI();
   };
 
   document.getElementById('productRecipeManageList').onclick = function(e) {
@@ -624,21 +584,14 @@ window.addEventListener('load', function() {
     if (!card) return;
     const pIdx = Number(card.getAttribute('data-pidx'));
     const p = products[pIdx];
-
     if (e.target.classList.contains('p-del-btn')) {
-      if (confirm(`確定刪除「${p.name}」嗎？`)) {
-        products.splice(pIdx, 1);
-        saveProductsUI();
-      }
+      if (confirm(`確定刪除「${p.name}」嗎？`)) { products.splice(pIdx, 1); saveProductsUI(); }
     } else if (e.target.classList.contains('p-ing-del-btn')) {
-      const row = e.target.closest('[data-iidx]');
-      const iIdx = Number(row.getAttribute('data-iidx'));
-      p.ingredients.splice(iIdx, 1);
+      p.ingredients.splice(Number(e.target.closest('[data-iidx]').getAttribute('data-iidx')), 1);
       saveProductsUI();
     } else if (e.target.classList.contains('p-add-ing-btn')) {
-      const firstMat = Object.keys(rawMaterials)[0] || "青銅母礦";
       if (!p.ingredients) p.ingredients = [];
-      p.ingredients.push({ name: firstMat, qty: 1 });
+      p.ingredients.push({ name: Object.keys(rawMaterials)[0] || "青銅母礦", qty: 1 });
       saveProductsUI();
     }
   };
@@ -652,19 +605,14 @@ window.addEventListener('load', function() {
   }
 
   document.getElementById('btnAddProduct').onclick = function() {
-    const prodName = prompt('請輸入新建成品的名稱 (例如: 黃金長劍)：', '新裝備或合成物');
-    if (prodName && prodName.trim()) {
-      products.push({
-        name: prodName.trim(),
-        isOreRecipe: false,
-        craftFee: 50000,
-        ingredients: [{ name: "青銅", qty: 1 }]
-      });
+    const name = prompt('請輸入新成品名稱：', '新裝備');
+    if (name && name.trim()) {
+      products.push({ name: name.trim(), isOreRecipe: false, craftFee: 50000, ingredients: [{ name: "青銅", qty: 1 }] });
       saveProductsUI();
     }
   };
 
-  // 背景相冊與透明度設定
+  // 背景幻燈片與相冊控制
   function applyBgImage() {
     if (bgImages.length > 0) {
       if (currentBgIndex >= bgImages.length) currentBgIndex = 0;
@@ -672,6 +620,46 @@ window.addEventListener('load', function() {
     }
     renderBgThumbs();
   }
+
+  function nextBg() {
+    if (bgImages.length > 0) {
+      currentBgIndex = (currentBgIndex + 1) % bgImages.length;
+      applyBgImage();
+    }
+  }
+
+  function prevBg() {
+    if (bgImages.length > 0) {
+      currentBgIndex = (currentBgIndex - 1 + bgImages.length) % bgImages.length;
+      applyBgImage();
+    }
+  }
+
+  function updateSlideshowTimer() {
+    if (slideshowTimer) clearInterval(slideshowTimer);
+    if (slideshowActive) {
+      slideshowTimer = setInterval(nextBg, slideshowTime);
+    }
+  }
+
+  document.getElementById('btnNextBg').onclick = nextBg;
+  document.getElementById('btnPrevBg').onclick = prevBg;
+
+  const ssToggle = document.getElementById('slideshowToggle');
+  ssToggle.checked = slideshowActive;
+  ssToggle.onchange = function() {
+    slideshowActive = this.checked;
+    saveData();
+    updateSlideshowTimer();
+  };
+
+  const ssIntervalSelect = document.getElementById('slideshowInterval');
+  ssIntervalSelect.value = slideshowTime;
+  ssIntervalSelect.onchange = function() {
+    slideshowTime = Number(this.value);
+    saveData();
+    updateSlideshowTimer();
+  };
 
   function renderBgThumbs() {
     const container = document.getElementById('bgThumbsContainer');
@@ -694,30 +682,21 @@ window.addEventListener('load', function() {
     document.querySelectorAll('.bg-thumb-del').forEach(el => {
       el.onclick = function(e) {
         e.stopPropagation();
-        const idx = Number(this.getAttribute('data-idx'));
-        bgImages.splice(idx, 1);
+        bgImages.splice(Number(this.getAttribute('data-idx')), 1);
         saveData();
         applyBgImage();
       };
     });
   }
 
-  document.getElementById('btnNextBg').onclick = function() {
-    if (bgImages.length > 0) {
-      currentBgIndex = (currentBgIndex + 1) % bgImages.length;
-      applyBgImage();
-    }
-  };
-
   document.getElementById('btnAddBgUrl').onclick = function() {
-    const urlInput = document.getElementById('bgUrlInput');
-    const url = urlInput.value.trim();
-    if (url) {
-      bgImages.push(url);
+    const input = document.getElementById('bgUrlInput');
+    if (input.value.trim()) {
+      bgImages.push(input.value.trim());
       saveData();
       currentBgIndex = bgImages.length - 1;
       applyBgImage();
-      urlInput.value = '';
+      input.value = '';
     }
   };
 
@@ -750,12 +729,13 @@ window.addEventListener('load', function() {
     document.getElementById('overlayVal').innerText = Math.round(this.value * 100) + '%';
   };
 
-  // 初始化啟動
+  // 初始化
   renderMarketGrid();
   renderProductDropdown();
   renderProductManagement();
   onProductChange();
   applyBgImage();
+  updateSlideshowTimer();
 });
 </script>
 
