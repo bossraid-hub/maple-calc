@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>楓之谷 母礦連鎖自動成本計算機 v4.9.3 (雲端同步版)</title>
+  <title>楓之谷成本計算機</title>
   
   <!-- 自訂分頁圖示 (使用穩定圖示源) -->
   <link rel="icon" type="image/png" href="https://icons.iconarchive.com/icons/raindropmemory/legend-of-mushroom/128/Maple-icon.png">
@@ -267,7 +267,7 @@
 
 <div class="container" id="mainContainer">
   <h2>
-    <span>🍁 楓之谷 母礦連鎖自動成本計算機 v4.9.3</span>
+    <span>🍁 楓之谷成本計算機</span>
     <div style="display:flex; gap:8px;">
       <button class="btn-sm btn-secondary" id="btnPrevBg">◀ 側邊上一張</button>
       <button class="btn-sm btn-secondary" id="btnNextBg">側邊下一張 ▶</button>
@@ -650,7 +650,6 @@ window.addEventListener('load', function() {
     const product = appData.products[idx];
     const box = document.getElementById('recipeDetailsBox');
 
-    // 帶入初始預設售價
     const marketInput = document.getElementById('inlineMarketPrice');
     if (!marketInput.dataset.userEdited || marketInput.dataset.currentProd !== product.name) {
       marketInput.value = formatNumber(product.marketPrice || 0);
@@ -702,7 +701,6 @@ window.addEventListener('load', function() {
 
     const product = appData.products[idx];
     
-    // 完整計算總成本（包含組合裝備的材料清單加總與製作費）
     let totalCost = product.isOreRecipe ? ((appData.rawMaterials[product.oreName] || 0) * 10) + (product.craftFee || 300) : (product.craftFee || 0);
     if (!product.isOreRecipe && product.ingredients) {
       product.ingredients.forEach(ing => { 
@@ -726,7 +724,7 @@ window.addEventListener('load', function() {
       adviceEl.style.color = '#28a745';
     } else if (profit < 0) {
       profitEl.style.color = '#dc3545';
-      adviceEl.innerText = `⚠️ 當前價格將虧損 ${formatNumber(Math.abs(profit))} 楓幣！`;
+      adviceEl.innerText = `⚠️️ 當前價格將虧損 ${formatNumber(Math.abs(profit))} 楓幣！`;
       adviceEl.style.color = '#dc3545';
     } else {
       profitEl.style.color = '#6c757d';
@@ -821,11 +819,11 @@ window.addEventListener('load', function() {
                   ${allItemNames.map(mat => `<option value="${mat}" ${mat === ing.name ? 'selected' : ''}>${mat}</option>`).join('')}
                 </select>
                 <input type="text" class="modal-ing-qty comma-input" value="${formatNumber(ing.qty)}" style="width:80px;">個
-                <button type="button" class="btn-sm btn-danger modal-del-ing">✕</button>
+                <button class="btn-sm btn-danger modal-del-ing">✕</button>
               </div>
             `).join('')}
           </div>
-          <button type="button" class="btn-sm btn-add" id="modalAddIngBtn" style="margin-top:6px;">➕ 新增材料需求</button>
+          <button class="btn-sm btn-secondary" id="modalAddIngBtn" style="margin-top:6px;">➕ 新增材料需求</button>
         `}
       </div>
     `;
@@ -853,42 +851,47 @@ window.addEventListener('load', function() {
           </div>
           <div style="font-weight:bold; font-size:13px; margin-bottom:6px; color:#1f497d;">材料需求清單：</div>
           <div id="modalIngredientsList"></div>
-          <button type="button" class="btn-sm btn-add" id="modalAddIngBtn" style="margin-top:6px;">➕ 新增材料需求</button>
+          <button class="btn-sm btn-secondary" id="modalAddIngBtn" style="margin-top:6px;">➕ 新增材料需求</button>
         `;
-        bindModalAddIngEvent(allItemNames);
+        document.getElementById('modalAddIngBtn').onclick = addModalIngRow;
       }
       bindCommaInputs();
     };
 
     if (!p.isOreRecipe) {
-      bindModalAddIngEvent(allItemNames);
+      document.getElementById('modalAddIngBtn').onclick = addModalIngRow;
+      attachModalDelIngEvents();
     }
+
     bindCommaInputs();
     document.getElementById('editModal').classList.add('active');
   }
 
-  function bindModalAddIngEvent(allItemNames) {
-    const addBtn = document.getElementById('modalAddIngBtn');
-    if (addBtn) {
-      addBtn.onclick = function() {
-        const listContainer = document.getElementById('modalIngredientsList');
-        const row = document.createElement('div');
-        row.style.cssText = "display:flex; gap:8px; margin-bottom:6px; align-items:center;";
-        row.className = "modal-ing-row";
-        row.innerHTML = `
-          <select class="modal-ing-name" style="flex:1;">
-            ${allItemNames.map(mat => `<option value="${mat}">${mat}</option>`).join('')}
-          </select>
-          <input type="text" class="modal-ing-qty comma-input" value="1" style="width:80px;">個
-          <button type="button" class="btn-sm btn-danger modal-del-ing">✕</button>
-        `;
-        row.querySelector('.modal-del-ing').onclick = function() { row.remove(); };
-        listContainer.appendChild(row);
-        bindCommaInputs();
-      };
-    }
+  function addModalIngRow() {
+    syncRawMaterials();
+    const allMatKeys = Object.keys(appData.rawMaterials);
+    const allItemNames = allMatKeys.concat(appData.products.map(prod => prod.name));
+    const list = document.getElementById('modalIngredientsList');
+    const div = document.createElement('div');
+    div.style.cssText = "display:flex; gap:8px; margin-bottom:6px; align-items:center;";
+    div.className = "modal-ing-row";
+    div.innerHTML = `
+      <select class="modal-ing-name" style="flex:1;">
+        ${allItemNames.map(mat => `<option value="${mat}">${mat}</option>`).join('')}
+      </select>
+      <input type="text" class="modal-ing-qty comma-input" value="1" style="width:80px;">個
+      <button class="btn-sm btn-danger modal-del-ing">✕</button>
+    `;
+    list.appendChild(div);
+    div.querySelector('.modal-del-ing').onclick = function() { div.remove(); };
+    bindCommaInputs();
+  }
+
+  function attachModalDelIngEvents() {
     document.querySelectorAll('.modal-del-ing').forEach(btn => {
-      btn.onclick = function() { this.closest('.modal-ing-row').remove(); };
+      btn.onclick = function() {
+        this.closest('.modal-ing-row').remove();
+      };
     });
   }
 
@@ -897,14 +900,10 @@ window.addEventListener('load', function() {
   };
 
   document.getElementById('btnSaveModal').onclick = function() {
-    if (editingProductIndex === null || !appData.products[editingProductIndex]) return;
-
+    if (editingProductIndex === null) return;
     const p = appData.products[editingProductIndex];
     const newName = document.getElementById('modalName').value.trim();
-    if (!newName) {
-      alert('名稱不能為空！');
-      return;
-    }
+    if (!newName) { alert('名稱不能為空！'); return; }
 
     p.name = newName;
     p.marketPrice = parseNumber(document.getElementById('modalMarketPrice').value);
@@ -920,24 +919,22 @@ window.addEventListener('load', function() {
       document.querySelectorAll('.modal-ing-row').forEach(row => {
         const ingName = row.querySelector('.modal-ing-name').value;
         const ingQty = parseNumber(row.querySelector('.modal-ing-qty').value);
-        p.ingredients.push({ name: ingName, qty: ingQty });
+        if (ingName && ingQty > 0) {
+          p.ingredients.push({ name: ingName, qty: ingQty });
+        }
       });
     }
 
-    document.getElementById('editModal').classList.remove('active');
     saveDataToCloud();
     refreshUI();
+    document.getElementById('editModal').classList.remove('active');
   };
 
   document.getElementById('btnConfirmAddProduct').onclick = function() {
     const nameInput = document.getElementById('newProdNameInput');
     const isOreCb = document.getElementById('newProdIsOreCb');
     const name = nameInput.value.trim();
-
-    if (!name) {
-      alert('請輸入成品名稱！');
-      return;
-    }
+    if (!name) { alert('請輸入成品名稱！'); return; }
 
     if (appData.products.some(p => p.name === name)) {
       alert('此成品名稱已存在！');
@@ -945,137 +942,160 @@ window.addEventListener('load', function() {
     }
 
     syncRawMaterials();
-    const firstOre = Object.keys(appData.rawMaterials)[0] || "青銅母礦";
+    const firstMat = Object.keys(appData.rawMaterials)[0] || "青銅母礦";
 
-    if (isOreCb.checked) {
-      appData.products.push({
-        name: name,
-        isOreRecipe: true,
-        oreName: firstOre,
-        craftFee: 300,
-        marketPrice: 50000,
-        ingredients: []
-      });
-    } else {
-      appData.products.push({
-        name: name,
-        isOreRecipe: false,
-        craftFee: 1000,
-        marketPrice: 100000,
-        ingredients: []
-      });
-    }
+    const newProd = isOreCb.checked ? {
+      name: name,
+      isOreRecipe: true,
+      oreName: firstMat,
+      craftFee: 300,
+      marketPrice: 50000,
+      ingredients: []
+    } : {
+      name: name,
+      isOreRecipe: false,
+      craftFee: 0,
+      marketPrice: 100000,
+      ingredients: []
+    };
 
+    appData.products.push(newProd);
     nameInput.value = '';
     isOreCb.checked = false;
     saveDataToCloud();
     refreshUI();
-    document.querySelector('[data-tab="tabContent-manage"]').click();
+    alert(`成功新增「${name}」！已自動導向管理配方或可至下拉選單查看。`);
   };
 
-  function updateGalleryImages() {
+  // 相冊與輪播管理邏輯
+  function updateGalleryDisplay() {
     const leftImg = document.getElementById('leftGalleryImg');
     const rightImg = document.getElementById('rightGalleryImg');
-    const bannerImg = document.getElementById('topBannerImg');
+    const topImg = document.getElementById('topBannerImg');
 
     if (appData.bgImages && appData.bgImages.length > 0) {
       currentBgIndex = currentBgIndex % appData.bgImages.length;
       leftImg.src = appData.bgImages[currentBgIndex];
       rightImg.src = appData.bgImages[currentBgIndex];
     } else {
-      leftImg.src = ''; rightImg.src = '';
+      leftImg.src = "";
+      rightImg.src = "";
     }
 
     if (appData.bannerImages && appData.bannerImages.length > 0) {
       currentBannerIndex = currentBannerIndex % appData.bannerImages.length;
-      bannerImg.src = appData.bannerImages[currentBannerIndex];
+      topImg.src = appData.bannerImages[currentBannerIndex];
     } else {
-      bannerImg.src = '';
+      topImg.src = "";
     }
 
     renderThumbnails();
   }
 
   function renderThumbnails() {
-    const bgContainer = document.getElementById('bgThumbsContainer');
-    bgContainer.innerHTML = (appData.bgImages || []).map((url, i) => `
+    const bgThumbs = document.getElementById('bgThumbsContainer');
+    bgThumbs.innerHTML = (appData.bgImages || []).map((url, i) => `
       <div class="bg-thumb-item ${i === currentBgIndex ? 'active' : ''}">
-        <img src="${url}" onclick="window.selectBg(${i})" title="點擊切換">
-        <button class="bg-thumb-del" onclick="window.delBg(${i})">✕</button>
+        <img src="${url}" data-bidx="${i}" class="click-bg-thumb">
+        <button class="bg-thumb-del del-bg-btn" data-bidx="${i}">✕</button>
       </div>
     `).join('');
 
-    const bannerContainer = document.getElementById('bannerThumbsContainer');
-    bannerContainer.innerHTML = (appData.bannerImages || []).map((url, i) => `
+    const bannerThumbs = document.getElementById('bannerThumbsContainer');
+    bannerThumbs.innerHTML = (appData.bannerImages || []).map((url, i) => `
       <div class="bg-thumb-item ${i === currentBannerIndex ? 'active' : ''}">
-        <img src="${url}" onclick="window.selectBanner(${i})" title="點擊切換">
-        <button class="bg-thumb-del" onclick="window.delBanner(${i})">✕</button>
+        <img src="${url}" data-banidx="${i}" class="click-banner-thumb">
+        <button class="bg-thumb-del del-banner-btn" data-banidx="${i}">✕</button>
       </div>
     `).join('');
+
+    document.querySelectorAll('.click-bg-thumb').forEach(img => {
+      img.onclick = function() { currentBgIndex = Number(this.getAttribute('data-bidx')); updateGalleryDisplay(); };
+    });
+    document.querySelectorAll('.del-bg-btn').forEach(btn => {
+      btn.onclick = function(e) {
+        e.stopPropagation();
+        const idx = Number(this.getAttribute('data-bidx'));
+        appData.bgImages.splice(idx, 1);
+        if (appData.bgImages.length === 0) appData.bgImages.push("https://images.unsplash.com/photo-1511447333015-45b65e60f6d5?auto=format&fit=crop&w=600&q=80");
+        saveDataToCloud();
+        updateGalleryDisplay();
+      };
+    });
+
+    document.querySelectorAll('.click-banner-thumb').forEach(img => {
+      img.onclick = function() { currentBannerIndex = Number(this.getAttribute('data-banidx')); updateGalleryDisplay(); };
+    });
+    document.querySelectorAll('.del-banner-btn').forEach(btn => {
+      btn.onclick = function(e) {
+        e.stopPropagation();
+        const idx = Number(this.getAttribute('data-banidx'));
+        appData.bannerImages.splice(idx, 1);
+        if (appData.bannerImages.length === 0) appData.bannerImages.push("https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=1200&q=80");
+        saveDataToCloud();
+        updateGalleryDisplay();
+      };
+    });
+
+    document.getElementById('slideshowToggle').checked = appData.slideshowActive;
+    document.getElementById('slideshowInterval').value = appData.slideshowTime || 10000;
+    setupSlideshowTimer();
   }
-
-  window.selectBg = function(i) { currentBgIndex = i; updateGalleryImages(); };
-  window.delBg = function(i) {
-    appData.bgImages.splice(i, 1);
-    saveDataToCloud();
-    updateGalleryImages();
-  };
-
-  window.selectBanner = function(i) { currentBannerIndex = i; updateGalleryImages(); };
-  window.delBanner = function(i) {
-    appData.bannerImages.splice(i, 1);
-    saveDataToCloud();
-    updateGalleryImages();
-  };
 
   document.getElementById('btnPrevBg').onclick = function() {
     if (appData.bgImages && appData.bgImages.length > 0) {
       currentBgIndex = (currentBgIndex - 1 + appData.bgImages.length) % appData.bgImages.length;
-      updateGalleryImages();
+      updateGalleryDisplay();
     }
   };
   document.getElementById('btnNextBg').onclick = function() {
     if (appData.bgImages && appData.bgImages.length > 0) {
       currentBgIndex = (currentBgIndex + 1) % appData.bgImages.length;
-      updateGalleryImages();
+      updateGalleryDisplay();
     }
   };
 
   document.getElementById('btnPrevBanner').onclick = function() {
     if (appData.bannerImages && appData.bannerImages.length > 0) {
       currentBannerIndex = (currentBannerIndex - 1 + appData.bannerImages.length) % appData.bannerImages.length;
-      updateGalleryImages();
+      updateGalleryDisplay();
     }
   };
   document.getElementById('btnNextBanner').onclick = function() {
     if (appData.bannerImages && appData.bannerImages.length > 0) {
       currentBannerIndex = (currentBannerIndex + 1) % appData.bannerImages.length;
-      updateGalleryImages();
+      updateGalleryDisplay();
     }
   };
 
-  document.getElementById('btnAddBgUrl').onclick = function() {
-    const url = document.getElementById('bgUrlInput').value.trim();
-    if (url) {
-      if (!appData.bgImages) appData.bgImages = [];
-      appData.bgImages.push(url);
-      document.getElementById('bgUrlInput').value = '';
-      saveDataToCloud();
-      updateGalleryImages();
+  function setupSlideshowTimer() {
+    if (slideshowTimer) clearInterval(slideshowTimer);
+    if (appData.slideshowActive) {
+      const interval = Number(appData.slideshowTime) || 10000;
+      slideshowTimer = setInterval(() => {
+        if (appData.bgImages && appData.bgImages.length > 0) {
+          currentBgIndex = (currentBgIndex + 1) % appData.bgImages.length;
+        }
+        if (appData.bannerImages && appData.bannerImages.length > 0) {
+          currentBannerIndex = (currentBannerIndex + 1) % appData.bannerImages.length;
+        }
+        updateGalleryDisplay();
+      }, interval);
     }
+  }
+
+  document.getElementById('slideshowToggle').onchange = function() {
+    appData.slideshowActive = this.checked;
+    saveDataToCloud();
+    setupSlideshowTimer();
+  };
+  document.getElementById('slideshowInterval').onchange = function() {
+    appData.slideshowTime = Number(this.value);
+    saveDataToCloud();
+    setupSlideshowTimer();
   };
 
-  document.getElementById('btnAddBannerUrl').onclick = function() {
-    const url = document.getElementById('bannerUrlInput').value.trim();
-    if (url) {
-      if (!appData.bannerImages) appData.bannerImages = [];
-      appData.bannerImages.push(url);
-      document.getElementById('bannerUrlInput').value = '';
-      saveDataToCloud();
-      updateGalleryImages();
-    }
-  };
-
+  // 圖片上傳與網址綁定
   document.getElementById('bgFileInput').onchange = function(e) {
     const file = e.target.files[0];
     if (file) {
@@ -1084,9 +1104,21 @@ window.addEventListener('load', function() {
         if (!appData.bgImages) appData.bgImages = [];
         appData.bgImages.push(event.target.result);
         saveDataToCloud();
-        updateGalleryImages();
+        updateGalleryDisplay();
+        e.target.value = '';
       };
       reader.readAsDataURL(file);
+    }
+  };
+
+  document.getElementById('btnAddBgUrl').onclick = function() {
+    const url = document.getElementById('bgUrlInput').value.trim();
+    if (url) {
+      if (!appData.bgImages) appData.bgImages = [];
+      appData.bgImages.push(url);
+      saveDataToCloud();
+      updateGalleryDisplay();
+      document.getElementById('bgUrlInput').value = '';
     }
   };
 
@@ -1098,41 +1130,22 @@ window.addEventListener('load', function() {
         if (!appData.bannerImages) appData.bannerImages = [];
         appData.bannerImages.push(event.target.result);
         saveDataToCloud();
-        updateGalleryImages();
+        updateGalleryDisplay();
+        e.target.value = '';
       };
       reader.readAsDataURL(file);
     }
   };
 
-  const toggleCb = document.getElementById('slideshowToggle');
-  const intervalSelect = document.getElementById('slideshowInterval');
-
-  function setupSlideshow() {
-    if (slideshowTimer) clearInterval(slideshowTimer);
-    if (appData.slideshowActive) {
-      const intervalTime = Number(appData.slideshowTime) || 10000;
-      slideshowTimer = setInterval(() => {
-        if (appData.bgImages && appData.bgImages.length > 0) {
-          currentBgIndex = (currentBgIndex + 1) % appData.bgImages.length;
-        }
-        if (appData.bannerImages && appData.bannerImages.length > 0) {
-          currentBannerIndex = (currentBannerIndex + 1) % appData.bannerImages.length;
-        }
-        updateGalleryImages();
-      }, intervalTime);
+  document.getElementById('btnAddBannerUrl').onclick = function() {
+    const url = document.getElementById('bannerUrlInput').value.trim();
+    if (url) {
+      if (!appData.bannerImages) appData.bannerImages = [];
+      appData.bannerImages.push(url);
+      saveDataToCloud();
+      updateGalleryDisplay();
+      document.getElementById('bannerUrlInput').value = '';
     }
-  }
-
-  toggleCb.onchange = function() {
-    appData.slideshowActive = this.checked;
-    saveDataToCloud();
-    setupSlideshow();
-  };
-
-  intervalSelect.onchange = function() {
-    appData.slideshowTime = Number(this.value);
-    saveDataToCloud();
-    setupSlideshow();
   };
 
   function refreshUI() {
@@ -1140,17 +1153,9 @@ window.addEventListener('load', function() {
     renderProductDropdown();
     onProductChange();
     renderProductManageList();
-    updateGalleryImages();
-
-    toggleCb.checked = !!appData.slideshowActive;
-    if (appData.slideshowTime) {
-      intervalSelect.value = appData.slideshowTime;
-    }
-    setupSlideshow();
-    bindCommaInputs();
+    updateGalleryDisplay();
   }
 
-  refreshUI();
 });
 </script>
 
