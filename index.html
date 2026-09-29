@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>楓之谷 母礦連鎖自動成本計算機 v4.9.0 (雲端同步版)</title>
+  <title>楓之谷 母礦連鎖自動成本計算機 v4.9.1 (雲端同步版)</title>
   
   <!-- 引入 Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -23,7 +23,6 @@
       align-items: center;
     }
 
-    /* 雲端同步狀態提示橫幅 */
     #cloudSyncStatus {
       position: fixed;
       top: 10px;
@@ -46,7 +45,6 @@
       color: #333;
     }
 
-    /* 左右兩側直版相冊看板 */
     .side-gallery {
       position: fixed;
       top: 50%;
@@ -78,7 +76,6 @@
       .side-gallery { display: none; }
     }
 
-    /* 頂部橫版大橫幅相冊看板 */
     .top-banner-gallery {
       width: 100%;
       max-width: 880px;
@@ -200,7 +197,6 @@
     .result-row.total { font-size: 18px; font-weight: bold; color: #c55a11; }
     .result-row.profit { font-size: 20px; font-weight: bold; border-top: 1px dashed #d9b26a; padding-top: 10px; margin-top: 10px; }
 
-    /* 成品管理列表排版 */
     .product-manage-row {
       display: flex;
       justify-content: space-between;
@@ -212,27 +208,11 @@
       margin-bottom: 8px;
       gap: 10px;
     }
-    .product-manage-info {
-      display: flex;
-      flex-direction: column;
-      flex: 1;
-    }
-    .product-manage-title {
-      font-weight: bold;
-      font-size: 16px;
-      color: #1f497d;
-    }
-    .product-manage-sub {
-      font-size: 12px;
-      color: #666;
-      margin-top: 2px;
-    }
-    .product-manage-actions {
-      display: flex;
-      gap: 6px;
-    }
+    .product-manage-info { display: flex; flex-direction: column; flex: 1; }
+    .product-manage-title { font-weight: bold; font-size: 16px; color: #1f497d; }
+    .product-manage-sub { font-size: 12px; color: #666; margin-top: 2px; }
+    .product-manage-actions { display: flex; gap: 6px; }
 
-    /* 彈出視窗 Modal 樣式 */
     .modal-overlay {
       position: fixed;
       top: 0; left: 0; width: 100%; height: 100%;
@@ -265,10 +245,8 @@
 </head>
 <body>
 
-<!-- 雲端同步狀態顯示 -->
 <div id="cloudSyncStatus">☁️ 雲端同步中...</div>
 
-<!-- 左右兩側直版相冊 -->
 <div class="side-gallery side-left">
   <img id="leftGalleryImg" src="" alt="左側直版相冊">
 </div>
@@ -276,7 +254,6 @@
   <img id="rightGalleryImg" src="" alt="右側直版相冊">
 </div>
 
-<!-- 頂部橫版大橫幅相冊 -->
 <div class="top-banner-gallery">
   <img id="topBannerImg" src="" alt="頂部橫版相冊">
   <div class="top-banner-controls">
@@ -287,13 +264,14 @@
 
 <div class="container" id="mainContainer">
   <h2>
-    <span>🍁 楓之谷 母礦連鎖自動成本計算機 v4.9.0</span>
+    <span>🍁 楓之谷 母礦連鎖自動成本計算機 v4.9.1</span>
     <div style="display:flex; gap:8px;">
       <button class="btn-sm btn-secondary" id="btnPrevBg">◀ 側邊上一張</button>
       <button class="btn-sm btn-secondary" id="btnNextBg">側邊下一張 ▶</button>
     </div>
   </h2>
 
+  <!-- 導覽列：管理成品在左、新增成品配方在右 -->
   <div class="tabs">
     <button class="tab-btn active" data-tab="tabContent-calc">🧮 快速選成品計算</button>
     <button class="tab-btn" data-tab="tabContent-manage">📜 管理成品</button>
@@ -330,7 +308,7 @@
     </div>
   </div>
 
-  <!-- 分頁 2：純管理清單 (只列出成品、提供 ✏️ 與 🗑️) -->
+  <!-- 分頁 2：管理成品 (在左側) -->
   <div id="tabContent-manage" class="tab-content">
     <div class="section-title"><span>成品清單管理 (點擊編輯或刪除)</span></div>
     <div style="font-size:12px; color:#555; margin-bottom:12px;">
@@ -339,7 +317,7 @@
     <div id="productManageList"></div>
   </div>
 
-  <!-- 分頁 3：獨立新增成品配方 -->
+  <!-- 分頁 3：新增成品配方 (在右側) -->
   <div id="tabContent-add" class="tab-content">
     <div class="section-title"><span>➕ 建立新的合成配方或裝備</span></div>
     <div style="background: rgba(255,255,255,0.95); padding: 20px; border-radius: 12px; border: 1px solid #ddd;">
@@ -358,11 +336,6 @@
 
   <!-- 分頁 4：設定 -->
   <div id="tabContent-settings" class="tab-content">
-    <div style="background:#fff3cd; padding:10px 15px; border-radius:8px; font-size:13px; margin-bottom:15px; border:1px solid #ffeeba; color:#856404; display:flex; justify-content:space-between; align-items:center;">
-      <span>🔐 目前已通過管理員驗證</span>
-      <button class="btn-sm btn-danger" id="btnLogoutAdmin" style="padding: 2px 8px; font-size: 11px;">登出管理員</button>
-    </div>
-
     <div class="section-title">🖼️ 1. 直版側邊相冊管理</div>
     <div class="bg-setting-panel">
       <div style="margin-bottom: 12px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
@@ -428,7 +401,6 @@
 </div>
 
 <script>
-// ==================== 🛠️ FIREBASE 雲端設定 ====================
 const firebaseConfig = {
   apiKey: "AIzaSyC-U8AEP7VymgBnaQ8DrrAuGWbrF6I8peE",
   authDomain: "maple-calculator-a35a4.firebaseapp.com",
@@ -445,10 +417,6 @@ const db = firebase.database();
 const dbRef = db.ref('maple_calculator_v490');
 
 window.addEventListener('load', function() {
-
-  const ADMIN_USER = "NMIXX";
-  const ADMIN_PASS = "0225";
-  let isAdminLoggedIn = sessionStorage.getItem('mp_admin_auth_v490') === 'true';
 
   const defaultData = {
     rawMaterials: {
@@ -481,6 +449,13 @@ window.addEventListener('load', function() {
 
   const statusEl = document.getElementById('cloudSyncStatus');
 
+  dbRef.once('value').then((snapshot) => {
+    const val = snapshot.val();
+    if (!val) {
+      dbRef.set(defaultData);
+    }
+  });
+
   dbRef.on('value', (snapshot) => {
     const val = snapshot.val();
     if (val) {
@@ -489,8 +464,6 @@ window.addEventListener('load', function() {
       if (!appData.products) appData.products = defaultData.products;
       if (!appData.bgImages) appData.bgImages = defaultData.bgImages;
       if (!appData.bannerImages) appData.bannerImages = defaultData.bannerImages;
-    } else {
-      dbRef.set(defaultData);
     }
     
     statusEl.innerText = "☁️ 雲端同步完成";
@@ -564,38 +537,12 @@ window.addEventListener('load', function() {
     btn.onclick = function() {
       const targetId = this.getAttribute('data-tab');
 
-      if ((targetId === 'tabContent-settings' || targetId === 'tabContent-manage' || targetId === 'tabContent-add') && !isAdminLoggedIn) {
-        const inputUser = prompt('請輸入管理員帳號：');
-        if (inputUser === null) return;
-        const inputPass = prompt('請輸入管理員密碼：');
-        if (inputPass === null) return;
-
-        if (inputUser === ADMIN_USER && inputPass === ADMIN_PASS) {
-          isAdminLoggedIn = true;
-          sessionStorage.setItem('mp_admin_auth_v490', 'true');
-          alert('管理員登入成功！');
-        } else {
-          alert('帳號或密碼錯誤，拒絕存取！');
-          return;
-        }
-      }
-
       document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
       document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
       document.getElementById(targetId).classList.add('active');
       this.classList.add('active');
     };
   });
-
-  document.getElementById('btnLogoutAdmin').onclick = function() {
-    isAdminLoggedIn = false;
-    sessionStorage.removeItem('mp_admin_auth_v490');
-    alert('已登出管理員！');
-    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-    document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-    document.getElementById('tabContent-calc').classList.add('active');
-    document.querySelector('[data-tab="tabContent-calc"]').classList.add('active');
-  };
 
   function renderMarketGrid() {
     syncRawMaterials();
@@ -759,7 +706,6 @@ window.addEventListener('load', function() {
     }
   }
 
-  // 渲染管理清單分頁 (只顯示名稱、類別與 ✏️ / 🗑️ 按鈕)
   function renderProductManageList() {
     syncRawMaterials();
     const container = document.getElementById('productManageList');
@@ -802,7 +748,6 @@ window.addEventListener('load', function() {
     });
   }
 
-  // 開啟編輯 Modal
   function openEditModal(idx) {
     const p = appData.products[idx];
     syncRawMaterials();
@@ -951,7 +896,6 @@ window.addEventListener('load', function() {
     document.getElementById('editModal').classList.remove('active');
   };
 
-  // 分頁 3：獨立新增成品
   document.getElementById('btnConfirmAddProduct').onclick = function() {
     const nameInput = document.getElementById('newProdNameInput');
     const isOreCb = document.getElementById('newProdIsOreCb');
@@ -979,7 +923,6 @@ window.addEventListener('load', function() {
     isOreCb.checked = false;
     alert(`成功新增成品「${name}」！`);
     
-    // 自動切回管理分頁
     document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
     document.getElementById('tabContent-manage').classList.add('active');
