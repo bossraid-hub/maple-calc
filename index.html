@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>楓之谷 母礦連鎖自動成本計算機 v4.6</title>
+  <title>楓之谷 母礦連鎖自動成本計算機 v4.7.1</title>
   <style>
     * { box-sizing: border-box; }
     body {
@@ -199,7 +199,7 @@
 
 <div class="container" id="mainContainer">
   <h2>
-    <span>🍁 楓之谷 母礦連鎖自動成本計算機 v4.6</span>
+    <span>🍁 楓之谷 母礦連鎖自動成本計算機 v4.7.1</span>
     <div style="display:flex; gap:8px;">
       <button class="btn-sm btn-secondary" id="btnPrevBg">◀ 側邊上一張</button>
       <button class="btn-sm btn-secondary" id="btnNextBg">側邊下一張 ▶</button>
@@ -209,7 +209,7 @@
   <div class="tabs">
     <button class="tab-btn active" data-tab="tabContent-calc">🧮 快速選成品計算</button>
     <button class="tab-btn" data-tab="tabContent-recipe">📜 管理成品與合成配方</button>
-    <button class="tab-btn" data-tab="tabContent-settings">⚙️ 設定與雙相冊管理</button>
+    <button class="tab-btn" data-tab="tabContent-settings" id="btnTabSettings">⚙️ 設定</button>
   </div>
 
   <div id="tabContent-calc" class="tab-content active">
@@ -254,8 +254,13 @@
   </div>
 
   <div id="tabContent-settings" class="tab-content">
-    <div style="background:#fff3cd; padding:10px 15px; border-radius:8px; font-size:13px; margin-bottom:15px; border:1px solid #ffeeba; color:#856404;">
-      🌐 <b>跨裝置同步提示：</b>若要讓「所有裝置（別人的手機或電腦）」點進來都看到你設定的圖片，請使用 **「雲端圖片網址」**（貼入公開的圖片直連網址）。如果使用「批量上傳檔案」，圖片只會存放在你當下的瀏覽器中。
+    <div style="background:#fff3cd; padding:10px 15px; border-radius:8px; font-size:13px; margin-bottom:15px; border:1px solid #ffeeba; color:#856404; display:flex; justify-content:space-between; align-items:center;">
+      <span>🔐 目前已通過管理員驗證</span>
+      <button class="btn-sm btn-danger" id="btnLogoutAdmin" style="padding: 2px 8px; font-size: 11px;">登出管理員</button>
+    </div>
+
+    <div style="background:#e8f4fd; padding:10px 15px; border-radius:8px; font-size:13px; margin-bottom:15px; border:1px solid #b8daff; color:#004085;">
+      🌐 <b>跨裝置同步提示：</b>若要讓「所有裝置」點進來都看到你設定的圖片，請使用 **「雲端圖片網址」**。
     </div>
 
     <div class="section-title">🖼️ 1. 直版側邊相冊管理（適合直式照片）</div>
@@ -311,6 +316,11 @@
 <script>
 window.addEventListener('load', function() {
 
+  // 管理員帳密設定 (NMIXX / 0225)
+  const ADMIN_USER = "NMIXX";
+  const ADMIN_PASS = "0225";
+  let isAdminLoggedIn = false;
+
   const defaultRawMaterials = {
     "青銅母礦": 4500,
     "鋼鐵母礦": 5000,
@@ -330,8 +340,6 @@ window.addEventListener('load', function() {
 
   let rawMaterials = {};
   let products = [];
-  
-  // 直版與橫版圖片陣列
   let bgImages = ["https://images.unsplash.com/photo-1511447333015-45b65e60f6d5?auto=format&fit=crop&w=600&q=80"];
   let bannerImages = ["https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=1200&q=80"];
   
@@ -342,25 +350,28 @@ window.addEventListener('load', function() {
   let slideshowTimer = null;
 
   try {
-    const savedRaws = localStorage.getItem('mp_raw_prices_v46');
+    const savedRaws = localStorage.getItem('mp_raw_prices_v471');
     if (savedRaws) rawMaterials = JSON.parse(savedRaws);
     else rawMaterials = { ...defaultRawMaterials };
 
-    const savedProds = localStorage.getItem('mp_products_v46');
+    const savedProds = localStorage.getItem('mp_products_v471');
     if (savedProds) products = JSON.parse(savedProds);
     else products = JSON.parse(JSON.stringify(defaultProducts));
 
-    const savedBgs = localStorage.getItem('mp_bg_list_v46');
+    const savedBgs = localStorage.getItem('mp_bg_list_v471');
     if (savedBgs) bgImages = JSON.parse(savedBgs);
 
-    const savedBanners = localStorage.getItem('mp_banner_list_v46');
+    const savedBanners = localStorage.getItem('mp_banner_list_v471');
     if (savedBanners) bannerImages = JSON.parse(savedBanners);
 
-    const savedSs = localStorage.getItem('mp_slideshow_active_v46');
+    const savedSs = localStorage.getItem('mp_slideshow_active_v471');
     if (savedSs !== null) slideshowActive = JSON.parse(savedSs);
 
-    const savedSsTime = localStorage.getItem('mp_slideshow_time_v46');
+    const savedSsTime = localStorage.getItem('mp_slideshow_time_v471');
     if (savedSsTime) slideshowTime = Number(savedSsTime);
+
+    const savedAuth = sessionStorage.getItem('mp_admin_auth_v471');
+    if (savedAuth === 'true') isAdminLoggedIn = true;
   } catch (e) {
     rawMaterials = { ...defaultRawMaterials };
     products = JSON.parse(JSON.stringify(defaultProducts));
@@ -384,12 +395,12 @@ window.addEventListener('load', function() {
 
   function saveData() {
     try {
-      localStorage.setItem('mp_raw_prices_v46', JSON.stringify(rawMaterials));
-      localStorage.setItem('mp_products_v46', JSON.stringify(products));
-      localStorage.setItem('mp_bg_list_v46', JSON.stringify(bgImages));
-      localStorage.setItem('mp_banner_list_v46', JSON.stringify(bannerImages));
-      localStorage.setItem('mp_slideshow_active_v46', JSON.stringify(slideshowActive));
-      localStorage.setItem('mp_slideshow_time_v46', slideshowTime);
+      localStorage.setItem('mp_raw_prices_v471', JSON.stringify(rawMaterials));
+      localStorage.setItem('mp_products_v471', JSON.stringify(products));
+      localStorage.setItem('mp_bg_list_v471', JSON.stringify(bgImages));
+      localStorage.setItem('mp_banner_list_v471', JSON.stringify(bannerImages));
+      localStorage.setItem('mp_slideshow_active_v471', JSON.stringify(slideshowActive));
+      localStorage.setItem('mp_slideshow_time_v471', slideshowTime);
     } catch(e) {}
   }
 
@@ -410,15 +421,46 @@ window.addEventListener('load', function() {
     return 0;
   }
 
+  // 分頁切換控制（含管理員登入攔截）
   document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.onclick = function() {
       const targetId = this.getAttribute('data-tab');
+
+      // 如果點擊設定分頁，檢查是否已登入管理員
+      if (targetId === 'tabContent-settings' && !isAdminLoggedIn) {
+        const inputUser = prompt('請輸入管理員帳號：');
+        if (inputUser === null) return; // 按取消
+        const inputPass = prompt('請輸入管理員密碼：');
+        if (inputPass === null) return;
+
+        if (inputUser === ADMIN_USER && inputPass === ADMIN_PASS) {
+          isAdminLoggedIn = true;
+          sessionStorage.setItem('mp_admin_auth_v471', 'true');
+          alert('管理員登入成功！');
+        } else {
+          alert('帳號或密碼錯誤，拒絕存取！');
+          return;
+        }
+      }
+
       document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
       document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
       document.getElementById(targetId).classList.add('active');
       this.classList.add('active');
     };
   });
+
+  // 管理員登出按鈕
+  document.getElementById('btnLogoutAdmin').onclick = function() {
+    isAdminLoggedIn = false;
+    sessionStorage.removeItem('mp_admin_auth_v471');
+    alert('已登出管理員！');
+    // 自動切回第一個分頁
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+    document.getElementById('tabContent-calc').classList.add('active');
+    document.querySelector('[data-tab="tabContent-calc"]').classList.add('active');
+  };
 
   function renderMarketGrid() {
     syncRawMaterials();
