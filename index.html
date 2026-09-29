@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>楓之谷成本計算機</title>
   
-  <!-- 自訂分頁圖示 (使用穩定圖示源) -->
+  <!-- 自訂分頁圖示 -->
   <link rel="icon" type="image/png" href="https://icons.iconarchive.com/icons/raindropmemory/legend-of-mushroom/128/Maple-icon.png">
 
   <!-- 引入 Firebase SDK -->
@@ -244,6 +244,32 @@
     .bg-thumb-item.active { border-color: #c55a11; }
     .bg-thumb-item img { width: 100%; height: 100%; object-fit: cover; cursor: pointer; }
     .bg-thumb-del { position: absolute; top: 2px; right: 2px; background: rgba(220,53,69,0.85); color: white; border: none; border-radius: 50%; width: 18px; height: 18px; font-size: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+
+    .exp-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+      background: rgba(255, 255, 255, 0.95);
+      padding: 18px;
+      border-radius: 12px;
+      border: 1px solid #ddd;
+      margin-bottom: 15px;
+    }
+    @media (max-width: 650px) {
+      .exp-grid { grid-template-columns: 1fr; }
+    }
+    .exp-field { display: flex; flex-direction: column; gap: 5px; }
+    .exp-field label { font-size: 13px; font-weight: bold; color: #333; }
+    .drop-item-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 8px;
+      background: #f8f9fa;
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 1px solid #eee;
+    }
   </style>
 </head>
 <body>
@@ -276,6 +302,7 @@
 
   <div class="tabs">
     <button class="tab-btn active" data-tab="tabContent-calc">🧮 快速選成品計算</button>
+    <button class="tab-btn" data-tab="tabContent-exp">📊 經驗與打怪效率計算機</button>
     <button class="tab-btn" data-tab="tabContent-manage">📜 管理成品</button>
     <button class="tab-btn" data-tab="tabContent-add">➕ 新增成品配方</button>
     <button class="tab-btn" data-tab="tabContent-settings" id="btnTabSettings">⚙️ 設定</button>
@@ -309,6 +336,107 @@
     </div>
   </div>
 
+  <!-- 新增的經驗與打怪效率計算機頁面 -->
+  <div id="tabContent-exp" class="tab-content">
+    <div class="section-title"><span>⏱️ 1. 測試時間區間</span></div>
+    <div class="exp-grid">
+      <div class="exp-field" style="grid-column: 1 / -1;">
+        <label>選擇測試時間：</label>
+        <select id="expTestDuration" style="font-size: 15px; font-weight: bold; color: #c55a11;">
+          <option value="20">20 分鐘</option>
+          <option value="30">30 分鐘</option>
+          <option value="40">40 分鐘</option>
+          <option value="60" selected>1 小時 (60 分鐘)</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="section-title"><span>📈 2. 經驗值與楓幣統計</span></div>
+    <div class="exp-grid">
+      <div class="exp-field">
+        <label>開始經驗值：</label>
+        <input type="text" id="expStart" class="comma-input" value="0">
+      </div>
+      <div class="exp-field">
+        <label>結束經驗值：</label>
+        <input type="text" id="expEnd" class="comma-input" value="0">
+      </div>
+      <div class="exp-field">
+        <label>開始楓幣：</label>
+        <input type="text" id="mesosStart" class="comma-input" value="0">
+      </div>
+      <div class="exp-field">
+        <label>結束楓幣 (自身獲得楓幣)：</label>
+        <input type="text" id="mesosEnd" class="comma-input" value="0">
+      </div>
+    </div>
+
+    <div class="section-title">
+      <span>🎒 3. 掉落物統計與收益 (自動計入楓幣收入)</span>
+      <button class="btn-sm btn-add" id="btnAddDropItem">➕ 新增掉落物項目</button>
+    </div>
+    <div id="dropItemsContainer" style="margin-bottom: 15px;"></div>
+
+    <div class="section-grid exp-grid" style="margin-bottom: 15px;">
+      <div class="exp-field">
+        <label>⚔️ 掉落武器數量 (每件固定 400,000 楓幣)：</label>
+        <input type="text" id="dropWeaponQty" class="comma-input" value="0">
+      </div>
+    </div>
+
+    <div class="section-title"><span>🧪 4. 消耗品開銷統計</span></div>
+    <div class="exp-grid">
+      <div class="exp-field">
+        <label>使用 HP水 單價：</label>
+        <input type="text" id="hpPrice" class="comma-input" value="0">
+      </div>
+      <div class="exp-field">
+        <label>HP水數量 (開始 ➔ 結束)：</label>
+        <div style="display:flex; gap:6px; align-items:center;">
+          <input type="text" id="hpStart" class="comma-input" value="0" placeholder="開始">
+          <span>➔</span>
+          <input type="text" id="hpEnd" class="comma-input" value="0" placeholder="結束">
+        </div>
+      </div>
+
+      <div class="exp-field">
+        <label>使用 MP水 單價：</label>
+        <input type="text" id="mpPrice" class="comma-input" value="0">
+      </div>
+      <div class="exp-field">
+        <label>MP水數量 (開始 ➔ 結束)：</label>
+        <div style="display:flex; gap:6px; align-items:center;">
+          <input type="text" id="mpStart" class="comma-input" value="0" placeholder="開始">
+          <span>➔</span>
+          <input type="text" id="mpEnd" class="comma-input" value="0" placeholder="結束">
+        </div>
+      </div>
+
+      <div class="exp-field">
+        <label>使用 櫻桃派/超水 單價：</label>
+        <input type="text" id="cherryPrice" class="comma-input" value="0">
+      </div>
+      <div class="exp-field">
+        <label>櫻桃派/超水數量 (開始 ➔ 結束)：</label>
+        <div style="display:flex; gap:6px; align-items:center;">
+          <input type="text" id="cherryStart" class="comma-input" value="0" placeholder="開始">
+          <span>➔</span>
+          <input type="text" id="cherryEnd" class="comma-input" value="0" placeholder="結束">
+        </div>
+      </div>
+    </div>
+
+    <div class="card-result">
+      <div class="result-row"><span>總獲得經驗值：</span><span id="resTotalExp" style="font-weight:bold; color:#1f497d;">0</span></div>
+      <div class="result-row"><span>打怪楓幣淨收益 (+掉落物+武器 - 藥水開銷)：</span><span id="resTotalMesos" style="font-weight:bold; color:#c55a11;">0 楓幣</span></div>
+      <hr style="border:0; border-top:1px dashed #d9b26a; margin:10px 0;">
+      <div class="result-row"><span>⏱️ 平均每 10 分鐘經驗值：</span><span id="resExp10m" style="font-weight:bold;">0</span></div>
+      <div class="result-row"><span>⏱️ 平均每 10 分鐘楓幣淨收益：</span><span id="resMesos10m" style="font-weight:bold;">0 楓幣</span></div>
+      <div class="result-row profit"><span>🚀 平均每 1 小時經驗值：</span><span id="resExp1h" style="color:#1f497d;">0</span></div>
+      <div class="result-row profit"><span>💰 平均每 1 小時楓幣淨收益：</span><span id="resMesos1h" style="color:#c55a11;">0 楓幣</span></div>
+    </div>
+  </div>
+
   <div id="tabContent-manage" class="tab-content">
     <div class="section-title"><span>成品清單管理 (點擊編輯或刪除)</span></div>
     <div style="font-size:12px; color:#555; margin-bottom:12px;">
@@ -334,7 +462,7 @@
   </div>
 
   <div id="tabContent-settings" class="tab-content">
-    <div class="section-title">🖼️ 1. 直版側邊相冊管理</div>
+    <div class="section-title">🖼️️ 1. 直版側邊相冊管理</div>
     <div class="bg-setting-panel">
       <div style="margin-bottom: 12px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
         <label style="font-weight:bold;">上傳電腦圖片：</label>
@@ -435,6 +563,10 @@ window.addEventListener('load', function() {
         ingredients: [{ name: "青銅", qty: 3 }, { name: "木柴", qty: 10 }]
       }
     ],
+    dropItems: [
+      { name: "觸角", price: 303, qty: 0 },
+      { name: "尾巴", price: 310, qty: 0 }
+    ],
     bgImages: ["https://images.unsplash.com/photo-1511447333015-45b65e60f6d5?auto=format&fit=crop&w=600&q=80"],
     bannerImages: ["https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=1200&q=80"],
     slideshowActive: false,
@@ -463,6 +595,7 @@ window.addEventListener('load', function() {
       appData = Object.assign({}, defaultData, val);
       if (!appData.rawMaterials) appData.rawMaterials = defaultData.rawMaterials;
       if (!appData.products) appData.products = defaultData.products;
+      if (!appData.dropItems) appData.dropItems = defaultData.dropItems;
       if (!appData.bgImages) appData.bgImages = defaultData.bgImages;
       if (!appData.bannerImages) appData.bannerImages = defaultData.bannerImages;
     }
@@ -492,7 +625,6 @@ window.addEventListener('load', function() {
     });
   }
 
-  // 千分位格式化工具函數
   function formatNumber(num) {
     if (num === '' || num === null || isNaN(num)) return '';
     return Number(num).toLocaleString('en-US');
@@ -503,10 +635,8 @@ window.addEventListener('load', function() {
     return Number(String(str).replace(/,/g, '')) || 0;
   }
 
-  // 為所有 class="comma-input" 的輸入框綁聯動與千分位格式
   function bindCommaInputs() {
     document.querySelectorAll('.comma-input').forEach(input => {
-      // 避免重複綁定
       if (input.dataset.commaBound) return;
       input.dataset.commaBound = "true";
 
@@ -517,6 +647,11 @@ window.addEventListener('load', function() {
       input.addEventListener('blur', function() {
         const val = parseNumber(this.value);
         this.value = formatNumber(val);
+        calculateExpEfficiency();
+      });
+
+      input.addEventListener('input', function() {
+        calculateExpEfficiency();
       });
     });
   }
@@ -724,7 +859,7 @@ window.addEventListener('load', function() {
       adviceEl.style.color = '#28a745';
     } else if (profit < 0) {
       profitEl.style.color = '#dc3545';
-      adviceEl.innerText = `⚠️️ 當前價格將虧損 ${formatNumber(Math.abs(profit))} 楓幣！`;
+      adviceEl.innerText = `⚠ 當前價格將虧損 ${formatNumber(Math.abs(profit))} 楓幣！`;
       adviceEl.style.color = '#dc3545';
     } else {
       profitEl.style.color = '#6c757d';
@@ -732,6 +867,129 @@ window.addEventListener('load', function() {
       adviceEl.style.color = '#6c757d';
     }
   }
+
+  // 經驗與打怪效率計算機邏輯
+  function renderDropItems() {
+    const container = document.getElementById('dropItemsContainer');
+    if (!appData.dropItems) appData.dropItems = [];
+
+    container.innerHTML = appData.dropItems.map((item, idx) => `
+      <div class="drop-item-row" data-didx="${idx}">
+        <input type="text" class="drop-name" value="${item.name}" placeholder="物品名稱" style="flex:2;">
+        <input type="text" class="drop-price comma-input" value="${formatNumber(item.price)}" placeholder="單價" style="flex:1;">
+        <span style="font-size:13px; font-weight:bold;">單價(楓幣)</span>
+        <input type="text" class="drop-qty comma-input" value="${formatNumber(item.qty)}" placeholder="數量" style="flex:1;">
+        <span style="font-size:13px; font-weight:bold;">個</span>
+        <button class="btn-sm btn-danger drop-del-btn" data-didx="${idx}">✕</button>
+      </div>
+    `).join('');
+
+    container.querySelectorAll('.drop-name, .drop-price, .drop-qty').forEach(input => {
+      input.oninput = function() {
+        const row = this.closest('.drop-item-row');
+        const dIdx = Number(row.getAttribute('data-didx'));
+        appData.dropItems[dIdx].name = row.querySelector('.drop-name').value;
+        appData.dropItems[dIdx].price = parseNumber(row.querySelector('.drop-price').value);
+        appData.dropItems[dIdx].qty = parseNumber(row.querySelector('.drop-qty').value);
+        saveDataToCloud();
+        calculateExpEfficiency();
+      };
+    });
+
+    container.querySelectorAll('.drop-del-btn').forEach(btn => {
+      btn.onclick = function() {
+        const dIdx = Number(this.getAttribute('data-didx'));
+        appData.dropItems.splice(dIdx, 1);
+        saveDataToCloud();
+        renderDropItems();
+        calculateExpEfficiency();
+      };
+    });
+
+    bindCommaInputs();
+  }
+
+  document.getElementById('btnAddDropItem').onclick = function() {
+    if (!appData.dropItems) appData.dropItems = [];
+    appData.dropItems.push({ name: "新掉落物", price: 0, qty: 0 });
+    saveDataToCloud();
+    renderDropItems();
+  };
+
+  document.getElementById('expTestDuration').onchange = function() {
+    calculateExpEfficiency();
+  };
+
+  function calculateExpEfficiency() {
+    const durationMinutes = Number(document.getElementById('expTestDuration').value) || 60;
+
+    const expStart = parseNumber(document.getElementById('expStart').value);
+    const expEnd = parseNumber(document.getElementById('expEnd').value);
+    const totalExp = Math.max(0, expEnd - expStart);
+
+    const mesosStart = parseNumber(document.getElementById('mesosStart').value);
+    const mesosEnd = parseNumber(document.getElementById('mesosEnd').value);
+    const baseMesos = Math.max(0, mesosEnd - mesosStart);
+
+    // 掉落物總金額
+    let dropMesos = 0;
+    if (appData.dropItems) {
+      appData.dropItems.forEach(item => {
+        dropMesos += (item.price || 0) * (item.qty || 0);
+      });
+    }
+
+    // 掉落武器總金額 (每件40萬)
+    const weaponQty = parseNumber(document.getElementById('dropWeaponQty').value);
+    const weaponMesos = weaponQty * 400000;
+
+    // 開銷計算
+    const hpPrice = parseNumber(document.getElementById('hpPrice').value);
+    const hpStart = parseNumber(document.getElementById('hpStart').value);
+    const hpEnd = parseNumber(document.getElementById('hpEnd').value);
+    const hpUsed = Math.max(0, hpStart - hpEnd);
+    const hpCost = hpPrice * hpUsed;
+
+    const mpPrice = parseNumber(document.getElementById('mpPrice').value);
+    const mpStart = parseNumber(document.getElementById('mpStart').value);
+    const mpEnd = parseNumber(document.getElementById('mpEnd').value);
+    const mpUsed = Math.max(0, mpStart - mpEnd);
+    const mpCost = mpPrice * mpUsed;
+
+    const cherryPrice = parseNumber(document.getElementById('cherryPrice').value);
+    const cherryStart = parseNumber(document.getElementById('cherryStart').value);
+    const cherryEnd = parseNumber(document.getElementById('cherryEnd').value);
+    const cherryUsed = Math.max(0, cherryStart - cherryEnd);
+    const cherryCost = cherryPrice * cherryUsed;
+
+    const totalCost = hpCost + mpCost + cherryCost;
+
+    // 楓幣淨收益 = 獲得楓幣 + 掉落物 + 武器賣出 - 消耗品開銷
+    const totalNetMesos = baseMesos + dropMesos + weaponMesos - totalCost;
+
+    // 每10分鐘與每1小時的平均
+    const expPerMin = totalExp / durationMinutes;
+    const mesosPerMin = totalNetMesos / durationMinutes;
+
+    const exp10m = Math.round(expPerMin * 10);
+    const mesos10m = Math.round(mesosPerMin * 10);
+    const exp1h = Math.round(expPerMin * 60);
+    const mesos1h = Math.round(mesosPerMin * 60);
+
+    document.getElementById('resTotalExp').innerText = formatNumber(totalExp);
+    document.getElementById('resTotalMesos').innerText = formatNumber(totalNetMesos) + ' 楓幣';
+    document.getElementById('resExp10m').innerText = formatNumber(exp10m);
+    document.getElementById('resMesos10m').innerText = formatNumber(mesos10m) + ' 楓幣';
+    document.getElementById('resExp1h').innerText = formatNumber(exp1h);
+    document.getElementById('resMesos1h').innerText = formatNumber(mesos1h) + ' 楓幣';
+  }
+
+  // 綁定所有計算機輸入即時聯動
+  document.querySelectorAll('#tabContent-exp input').forEach(input => {
+    input.oninput = function() {
+      calculateExpEfficiency();
+    };
+  });
 
   function renderProductManageList() {
     syncRawMaterials();
@@ -964,10 +1222,9 @@ window.addEventListener('load', function() {
     isOreCb.checked = false;
     saveDataToCloud();
     refreshUI();
-    alert(`成功新增「${name}」！已自動導向管理配方或可至下拉選單查看。`);
+    alert(`成功新增「${name}」！`);
   };
 
-  // 相冊與輪播管理邏輯
   function updateGalleryDisplay() {
     const leftImg = document.getElementById('leftGalleryImg');
     const rightImg = document.getElementById('rightGalleryImg');
@@ -1095,7 +1352,6 @@ window.addEventListener('load', function() {
     setupSlideshowTimer();
   };
 
-  // 圖片上傳與網址綁定
   document.getElementById('bgFileInput').onchange = function(e) {
     const file = e.target.files[0];
     if (file) {
@@ -1153,6 +1409,8 @@ window.addEventListener('load', function() {
     renderProductDropdown();
     onProductChange();
     renderProductManageList();
+    renderDropItems();
+    calculateExpEfficiency();
     updateGalleryDisplay();
   }
 
