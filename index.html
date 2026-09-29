@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>楓之谷 母礦連鎖自動成本計算機 v4.4</title>
+  <title>楓之谷 母礦連鎖自動成本計算機 v4.5</title>
   <style>
     * { box-sizing: border-box; }
     body {
@@ -18,7 +18,7 @@
       align-items: flex-start;
     }
 
-    /* 左右兩側相冊看板容器 */
+    /* 左右兩側相冊看板 */
     .side-gallery {
       position: fixed;
       top: 50%;
@@ -39,7 +39,6 @@
     .side-left { left: 25px; }
     .side-right { right: 25px; }
     
-    /* 側邊圖片：保持完整比例，絕對不變形、不切掉 */
     .side-gallery img {
       max-width: 100%;
       max-height: 100%;
@@ -48,7 +47,7 @@
     }
 
     @media (max-width: 1350px) {
-      .side-gallery { display: none; } /* 螢幕太小時自動隱藏兩側看板，避免擠壓計算機 */
+      .side-gallery { display: none; }
     }
 
     .container {
@@ -138,7 +137,6 @@
 </head>
 <body>
 
-<!-- 左右兩側相冊看板 -->
 <div class="side-gallery side-left">
   <img id="leftGalleryImg" src="" alt="左側相冊">
 </div>
@@ -148,21 +146,19 @@
 
 <div class="container" id="mainContainer">
   <h2>
-    <span>🍁 楓之谷 母礦連鎖自動成本計算機 v4.4</span>
+    <span>🍁 楓之谷 母礦連鎖自動成本計算機 v4.5</span>
     <div style="display:flex; gap:8px;">
       <button class="btn-sm btn-secondary" id="btnPrevBg">◀ 上一張</button>
       <button class="btn-sm btn-secondary" id="btnNextBg">下一張 ▶</button>
     </div>
   </h2>
 
-  <!-- 頂端頁籤切換 -->
   <div class="tabs">
     <button class="tab-btn active" data-tab="tabContent-calc">🧮 快速選成品計算</button>
     <button class="tab-btn" data-tab="tabContent-recipe">📜 管理成品與合成配方</button>
     <button class="tab-btn" data-tab="tabContent-settings">⚙️ 設定與側邊相冊</button>
   </div>
 
-  <!-- 分頁 1: 計算機 -->
   <div id="tabContent-calc" class="tab-content active">
     <div class="section-title">
       <span>1. 輸入基礎「母礦」或「打怪雜物」單價</span>
@@ -193,19 +189,17 @@
     </div>
   </div>
 
-  <!-- 分頁 2: 配方管理 -->
   <div id="tabContent-recipe" class="tab-content">
     <div class="section-title">
       <span>新增 / 編輯成品或中階合成物配方</span>
       <button class="btn-sm btn-add" id="btnAddProduct">➕ 新增合成配方</button>
     </div>
     <div style="font-size:12px; color:#555; margin-bottom:10px;">
-      💡 <b>小提示：</b>若此項目是由「10個母礦 + 300元合成費」煉製而成的（例如青銅、鋼鐵），請勾選「是母礦合成物」。
+      💡 <b>小提示：</b>修改名稱或數量後，請點擊空白處或按 Enter，即可順暢儲存！
     </div>
     <div id="productRecipeManageList"></div>
   </div>
 
-  <!-- 分頁 3: 側邊相冊設定 -->
   <div id="tabContent-settings" class="tab-content">
     <div class="section-title">🖼️ 側邊相冊多圖管理 (完整顯示不裁切)</div>
     <div class="bg-setting-panel">
@@ -271,21 +265,21 @@ window.addEventListener('load', function() {
   let slideshowTimer = null;
 
   try {
-    const savedRaws = localStorage.getItem('mp_raw_prices_v44');
+    const savedRaws = localStorage.getItem('mp_raw_prices_v45');
     if (savedRaws) rawMaterials = JSON.parse(savedRaws);
     else rawMaterials = { ...defaultRawMaterials };
 
-    const savedProds = localStorage.getItem('mp_products_v44');
+    const savedProds = localStorage.getItem('mp_products_v45');
     if (savedProds) products = JSON.parse(savedProds);
     else products = JSON.parse(JSON.stringify(defaultProducts));
 
-    const savedBgs = localStorage.getItem('mp_bg_list_v44');
+    const savedBgs = localStorage.getItem('mp_bg_list_v45');
     if (savedBgs) bgImages = JSON.parse(savedBgs);
 
-    const savedSs = localStorage.getItem('mp_slideshow_active_v44');
+    const savedSs = localStorage.getItem('mp_slideshow_active_v45');
     if (savedSs !== null) slideshowActive = JSON.parse(savedSs);
 
-    const savedSsTime = localStorage.getItem('mp_slideshow_time_v44');
+    const savedSsTime = localStorage.getItem('mp_slideshow_time_v45');
     if (savedSsTime) slideshowTime = Number(savedSsTime);
   } catch (e) {
     rawMaterials = { ...defaultRawMaterials };
@@ -310,11 +304,11 @@ window.addEventListener('load', function() {
 
   function saveData() {
     try {
-      localStorage.setItem('mp_raw_prices_v44', JSON.stringify(rawMaterials));
-      localStorage.setItem('mp_products_v44', JSON.stringify(products));
-      localStorage.setItem('mp_bg_list_v44', JSON.stringify(bgImages));
-      localStorage.setItem('mp_slideshow_active_v44', JSON.stringify(slideshowActive));
-      localStorage.setItem('mp_slideshow_time_v44', slideshowTime);
+      localStorage.setItem('mp_raw_prices_v45', JSON.stringify(rawMaterials));
+      localStorage.setItem('mp_products_v45', JSON.stringify(products));
+      localStorage.setItem('mp_bg_list_v45', JSON.stringify(bgImages));
+      localStorage.setItem('mp_slideshow_active_v45', JSON.stringify(slideshowActive));
+      localStorage.setItem('mp_slideshow_time_v45', slideshowTime);
     } catch(e) {}
   }
 
@@ -335,7 +329,6 @@ window.addEventListener('load', function() {
     return 0;
   }
 
-  // 頁籤切換
   document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.onclick = function() {
       const targetId = this.getAttribute('data-tab');
@@ -346,7 +339,6 @@ window.addEventListener('load', function() {
     };
   });
 
-  // 1. 市場行情
   function renderMarketGrid() {
     syncRawMaterials();
     const grid = document.getElementById('marketPriceGrid');
@@ -374,7 +366,7 @@ window.addEventListener('load', function() {
     }).join('');
 
     document.querySelectorAll('.mat-price-input').forEach(input => {
-      input.oninput = function() {
+      input.onchange = function() {
         rawMaterials[this.getAttribute('data-mat')] = Number(this.value) || 0;
         saveData();
         onProductChange();
@@ -409,7 +401,6 @@ window.addEventListener('load', function() {
     }
   };
 
-  // 2. 計算機選單
   function renderProductDropdown() {
     const select = document.getElementById('productSelect');
     if (products.length === 0) {
@@ -494,7 +485,6 @@ window.addEventListener('load', function() {
     }
   }
 
-  // 3. 配方管理
   function renderProductManagement() {
     syncRawMaterials();
     const container = document.getElementById('productRecipeManageList');
@@ -541,28 +531,24 @@ window.addEventListener('load', function() {
     `).join('');
   }
 
-  document.getElementById('productRecipeManageList').oninput = function(e) {
+  // 關鍵改善：改用 onchange，讓你在輸入中文時不會中斷或頻繁重繪畫面
+  document.getElementById('productRecipeManageList').onchange = function(e) {
     const card = e.target.closest('.recipe-card-edit');
     if (!card) return;
     const p = products[Number(card.getAttribute('data-pidx'))];
+    
     if (e.target.classList.contains('p-name-in')) p.name = e.target.value;
     else if (e.target.classList.contains('p-orefee-in') || e.target.classList.contains('p-fee-in')) p.craftFee = Number(e.target.value) || 0;
     else if (e.target.classList.contains('p-ing-qty-in')) {
       const iIdx = Number(e.target.closest('[data-iidx]').getAttribute('data-iidx'));
       p.ingredients[iIdx].qty = Number(e.target.value) || 0;
     }
-    saveProductsUI();
-  };
-
-  document.getElementById('productRecipeManageList').onchange = function(e) {
-    const card = e.target.closest('.recipe-card-edit');
-    if (!card) return;
-    const p = products[Number(card.getAttribute('data-pidx'))];
-    if (e.target.classList.contains('p-isore-cb')) {
+    else if (e.target.classList.contains('p-isore-cb')) {
       p.isOreRecipe = e.target.checked;
       if (p.isOreRecipe) { p.oreName = Object.keys(rawMaterials)[0] || "青銅母礦"; p.craftFee = 300; p.ingredients = []; }
       else { p.craftFee = 50000; p.ingredients = [{ name: "青銅", qty: 1 }]; }
-    } else if (e.target.classList.contains('p-orename-select')) p.oreName = e.target.value;
+    } 
+    else if (e.target.classList.contains('p-orename-select')) p.oreName = e.target.value;
     else if (e.target.classList.contains('p-ing-mat-select')) {
       const iIdx = Number(e.target.closest('[data-iidx]').getAttribute('data-iidx'));
       p.ingredients[iIdx].name = e.target.value;
@@ -603,12 +589,10 @@ window.addEventListener('load', function() {
     }
   };
 
-  // 側邊相冊控制
   function applySideGalleryImages() {
     if (bgImages.length > 0) {
       if (currentBgIndex >= bgImages.length) currentBgIndex = 0;
       const currentImgUrl = bgImages[currentBgIndex];
-      // 左右兩側顯示同一張或交錯皆可，此處設定左右同步顯示完整圖片
       document.getElementById('leftGalleryImg').src = currentImgUrl;
       document.getElementById('rightGalleryImg').src = currentImgUrl;
     }
@@ -713,7 +697,6 @@ window.addEventListener('load', function() {
     }
   };
 
-  // 初始化
   renderMarketGrid();
   renderProductDropdown();
   renderProductManagement();
