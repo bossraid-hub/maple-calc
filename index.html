@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>楓之谷 母礦連鎖自動成本計算機 v4.9.5 (資料救援與獨立雲端版)</title>
+  <title>楓之谷 母礦連鎖自動成本計算機 v4.9.1</title>
   
   <!-- 自訂分頁圖示 -->
   <link rel="icon" type="image/png" href="https://icons.iconarchive.com/icons/raindropmemory/legend-of-mushroom/128/Maple-icon.png">
@@ -248,7 +248,7 @@
 </head>
 <body>
 
-<div id="cloudSyncStatus">🔄 正在尋找並還原您的資料...</div>
+<div id="cloudSyncStatus">🔄 連線中...</div>
 
 <div class="side-gallery side-left">
   <img id="leftGalleryImg" src="" alt="左側直版相冊">
@@ -267,7 +267,7 @@
 
 <div class="container" id="mainContainer">
   <h2>
-    <span>🍁 楓之谷 母礦連鎖自動成本計算機 v4.9.5</span>
+    <span>🍁 楓之谷 母礦連鎖自動成本計算機 v4.9.1</span>
     <div style="display:flex; gap:8px;">
       <button class="btn-sm btn-secondary" id="btnPrevBg">◀ 側邊上一張</button>
       <button class="btn-sm btn-secondary" id="btnNextBg">側邊下一張 ▶</button>
@@ -411,10 +411,7 @@ const firebaseConfig = {
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
-
-// 💡 資料救援與獨立儲存區
-const newDbRef = db.ref('maple_calculator_user_data_v494');
-const oldDbRef = db.ref('maple_calculator_user_data');
+const dbRef = db.ref('maple_calculator_user_data');
 
 window.addEventListener('load', function() {
 
@@ -426,7 +423,7 @@ window.addEventListener('load', function() {
     },
     products: [
       {
-        name: "合成木材 (組合裝備)", isOreRecipe: false, craftFee: 0, marketPrice: 9190,
+        name: "合成木材", isOreRecipe: false, craftFee: 0, marketPrice: 9190,
         ingredients: [{ name: "木柴", qty: 5 }]
       }
     ],
@@ -445,61 +442,40 @@ window.addEventListener('load', function() {
 
   const statusEl = document.getElementById('cloudSyncStatus');
 
-  // 自動執行救援機制：優先檢查新獨立路徑有沒有資料，如果沒有，則嘗試從舊路徑搬過來！
-  newDbRef.once('value').then((newSnapshot) => {
-    const newVal = newSnapshot.val();
-    if (newVal && newVal.products && newVal.products.length > 1) {
-      // 新路徑已經有豐富資料，直接使用
-      initApp(newVal);
+  dbRef.once('value').then((snapshot) => {
+    const val = snapshot.val();
+    if (val) {
+      appData = Object.assign({}, defaultData, val);
+      if (!appData.rawMaterials) appData.rawMaterials = defaultData.rawMaterials;
+      if (!appData.products) appData.products = defaultData.products;
+      if (!appData.bgImages) appData.bgImages = defaultData.bgImages;
+      if (!appData.bannerImages) appData.bannerImages = defaultData.bannerImages;
     } else {
-      // 嘗試從舊路徑尋找寶貴資料
-      oldDbRef.once('value').then((oldSnapshot) => {
-        const oldVal = oldSnapshot.val();
-        if (oldVal && oldVal.products) {
-          // 找到了！將舊資料搬移並儲存到新獨立路徑
-          appData = Object.assign({}, defaultData, oldVal);
-          newDbRef.set(appData);
-          initApp(appData);
-        } else {
-          // 兩邊都沒有就初始化預設值
-          newDbRef.set(defaultData);
-          initApp(defaultData);
-        }
-      }).catch(() => {
-        initApp(defaultData);
-      });
+      dbRef.set(defaultData);
     }
-  }).catch(() => {
-    initApp(defaultData);
-  });
-
-  function initApp(loadedData) {
-    appData = Object.assign({}, defaultData, loadedData);
-    if (!appData.rawMaterials) appData.rawMaterials = defaultData.rawMaterials;
-    if (!appData.products) appData.products = defaultData.products;
-    if (!appData.bgImages) appData.bgImages = defaultData.bgImages;
-    if (!appData.bannerImages) appData.bannerImages = defaultData.bannerImages;
-
-    statusEl.innerText = "☁️ 雲端同步完成 (資料已成功載入)";
+    statusEl.innerText = "☁️ 雲端同步完成";
     statusEl.className = "";
     refreshUI();
+  }).catch(() => {
+    statusEl.innerText = "⚠️ 離線模式";
+    statusEl.className = "syncing";
+    refreshUI();
+  });
 
-    // 監聽新獨立路徑即時連動
-    newDbRef.on('value', (snapshot) => {
-      const val = snapshot.val();
-      if (val && !isLocalUpdating) {
-        appData = Object.assign({}, defaultData, val);
-        refreshUI();
-      }
-      isLocalUpdating = false;
-    });
-  }
+  dbRef.on('value', (snapshot) => {
+    const val = snapshot.val();
+    if (val && !isLocalUpdating) {
+      appData = Object.assign({}, defaultData, val);
+      refreshUI();
+    }
+    isLocalUpdating = false;
+  });
 
   function saveDataToCloud() {
     isLocalUpdating = true;
     statusEl.innerText = "🔄 同步中...";
     statusEl.className = "syncing";
-    newDbRef.set(appData).then(() => {
+    dbRef.set(appData).then(() => {
       statusEl.innerText = "☁️ 雲端同步完成";
       statusEl.className = "";
     }).catch(() => {
@@ -649,7 +625,8 @@ window.addEventListener('load', function() {
       document.getElementById('recipeDetailsBox').innerHTML = '無配方資訊';
       return;
     }
-    select.innerHTML = appData.products.map((p, idx) => `<option value="${idx}">${p.name} ${p.isOreRecipe ? '(母礦合成物)' : '(組合裝備)'}</option>`).join('');
+    // 修正：直接以成品名稱作為選項標籤，不另外附加重複的類別字串避免看起來像兩次組合
+    select.innerHTML = appData.products.map((p, idx) => `<option value="${idx}">${p.name}</option>`).join('');
     if (currentVal !== "" && currentVal < appData.products.length) {
       select.value = currentVal;
     }
