@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>楓之谷 母礦連鎖自動成本計算機 v4.3</title>
+  <title>楓之谷 母礦連鎖自動成本計算機 v4.4</title>
   <style>
     * { box-sizing: border-box; }
     body {
@@ -11,32 +11,58 @@
       padding: 20px;
       margin: 0;
       color: #222;
-      background-color: #111;
-      /* 關鍵：讓背景圖片等比例填滿且不變形、永遠置中 */
-      background-size: cover;
-      background-position: center;
-      background-attachment: fixed;
-      background-repeat: no-repeat;
+      background-color: #1a1a1a;
       min-height: 100vh;
-      transition: background-image 0.8s ease-in-out; /* 切換背景時有漂亮的漸變特效 */
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
     }
-    .overlay {
+
+    /* 左右兩側相冊看板容器 */
+    .side-gallery {
       position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0, 0, 0, 0.2);
-      z-index: 1;
-      pointer-events: none;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 220px;
+      height: 450px;
+      background: rgba(0, 0, 0, 0.6);
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(5px);
     }
+    .side-left { left: 25px; }
+    .side-right { right: 25px; }
+    
+    /* 側邊圖片：保持完整比例，絕對不變形、不切掉 */
+    .side-gallery img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      transition: opacity 0.6s ease-in-out;
+    }
+
+    @media (max-width: 1350px) {
+      .side-gallery { display: none; } /* 螢幕太小時自動隱藏兩側看板，避免擠壓計算機 */
+    }
+
     .container {
       position: relative;
       z-index: 2;
+      width: 100%;
       max-width: 880px;
-      margin: 0 auto;
-      background: rgba(255, 255, 255, 0.88);
+      background: rgba(255, 255, 255, 0.92);
       padding: 25px;
       border-radius: 16px;
       box-shadow: 0 10px 30px rgba(0,0,0,0.3);
       backdrop-filter: blur(8px);
+      margin-top: 10px;
+      margin-bottom: 20px;
     }
     .tabs {
       display: flex;
@@ -112,11 +138,17 @@
 </head>
 <body>
 
-<div class="overlay" id="bgOverlay"></div>
+<!-- 左右兩側相冊看板 -->
+<div class="side-gallery side-left">
+  <img id="leftGalleryImg" src="" alt="左側相冊">
+</div>
+<div class="side-gallery side-right">
+  <img id="rightGalleryImg" src="" alt="右側相冊">
+</div>
 
 <div class="container" id="mainContainer">
   <h2>
-    <span>🍁 楓之谷 母礦連鎖自動成本計算機 v4.3</span>
+    <span>🍁 楓之谷 母礦連鎖自動成本計算機 v4.4</span>
     <div style="display:flex; gap:8px;">
       <button class="btn-sm btn-secondary" id="btnPrevBg">◀ 上一張</button>
       <button class="btn-sm btn-secondary" id="btnNextBg">下一張 ▶</button>
@@ -127,7 +159,7 @@
   <div class="tabs">
     <button class="tab-btn active" data-tab="tabContent-calc">🧮 快速選成品計算</button>
     <button class="tab-btn" data-tab="tabContent-recipe">📜 管理成品與合成配方</button>
-    <button class="tab-btn" data-tab="tabContent-settings">⚙️ 設定與背景相冊</button>
+    <button class="tab-btn" data-tab="tabContent-settings">⚙️ 設定與側邊相冊</button>
   </div>
 
   <!-- 分頁 1: 計算機 -->
@@ -173,9 +205,9 @@
     <div id="productRecipeManageList"></div>
   </div>
 
-  <!-- 分頁 3: 背景設定與幻燈片 -->
+  <!-- 分頁 3: 側邊相冊設定 -->
   <div id="tabContent-settings" class="tab-content">
-    <div class="section-title">🖼️ 背景圖多張相冊 (自動適應比例不變形)</div>
+    <div class="section-title">🖼️ 側邊相冊多圖管理 (完整顯示不裁切)</div>
     <div class="bg-setting-panel">
       <div style="margin-bottom: 12px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
         <label style="font-weight:bold;">1. 批量上傳照片：</label>
@@ -190,11 +222,11 @@
       <div class="bg-thumbs" id="bgThumbsContainer"></div>
     </div>
 
-    <div class="section-title">🎞️ 背景自動幻燈片輪播設定</div>
+    <div class="section-title">🎞️ 側邊相冊自動輪播設定</div>
     <div class="bg-setting-panel">
       <div style="margin-bottom: 12px; display:flex; align-items:center; gap:15px;">
         <label style="font-weight:bold; cursor:pointer;">
-          <input type="checkbox" id="slideshowToggle"> 啟用自動輪播背景
+          <input type="checkbox" id="slideshowToggle"> 啟用自動輪播相冊
         </label>
         <div>
           切換間隔：
@@ -205,20 +237,6 @@
             <option value="60000">每 1 分鐘</option>
           </select>
         </div>
-      </div>
-    </div>
-
-    <div class="section-title">✨ 照片清晰度與透明度調節</div>
-    <div class="bg-setting-panel">
-      <div style="margin-bottom: 12px;">
-        <label style="font-weight:bold;">白色計算機面板透明度：</label>
-        <input type="range" id="panelOpacityRange" min="0.2" max="0.95" step="0.05" value="0.88">
-        <span id="panelOpacityVal">88%</span>
-      </div>
-      <div>
-        <label style="font-weight:bold;">黑色背景遮罩濃度：</label>
-        <input type="range" id="overlayRange" min="0" max="0.7" step="0.05" value="0.2">
-        <span id="overlayVal">20%</span>
       </div>
     </div>
   </div>
@@ -236,65 +254,38 @@ window.addEventListener('load', function() {
   };
 
   const defaultProducts = [
+    { name: "青銅", isOreRecipe: true, oreName: "青銅母礦", craftFee: 300, ingredients: [] },
+    { name: "鋼鐵", isOreRecipe: true, oreName: "鋼鐵母礦", craftFee: 300, ingredients: [] },
     {
-      name: "青銅",
-      isOreRecipe: true,
-      oreName: "青銅母礦",
-      craftFee: 300,
-      ingredients: []
-    },
-    {
-      name: "鋼鐵",
-      isOreRecipe: true,
-      oreName: "鋼鐵母礦",
-      craftFee: 300,
-      ingredients: []
-    },
-    {
-      name: "青銅長劍",
-      isOreRecipe: false,
-      craftFee: 50000,
-      ingredients: [
-        { name: "青銅", qty: 3 },
-        { name: "木柴", qty: 10 }
-      ]
-    },
-    {
-      name: "青銅箭矢",
-      isOreRecipe: false,
-      craftFee: 10000,
-      ingredients: [
-        { name: "青銅", qty: 1 },
-        { name: "鋼鐵", qty: 1 },
-        { name: "堅硬羽毛", qty: 5 }
-      ]
+      name: "青銅長劍", isOreRecipe: false, craftFee: 50000,
+      ingredients: [{ name: "青銅", qty: 3 }, { name: "木柴", qty: 10 }]
     }
   ];
 
   let rawMaterials = {};
   let products = [];
-  let bgImages = ["https://images.unsplash.com/photo-1511447333015-45b65e60f6d5?auto=format&fit=crop&w=1920&q=80"];
+  let bgImages = ["https://images.unsplash.com/photo-1511447333015-45b65e60f6d5?auto=format&fit=crop&w=600&q=80"];
   let currentBgIndex = 0;
   let slideshowActive = false;
   let slideshowTime = 10000;
   let slideshowTimer = null;
 
   try {
-    const savedRaws = localStorage.getItem('mp_raw_prices_v4');
+    const savedRaws = localStorage.getItem('mp_raw_prices_v44');
     if (savedRaws) rawMaterials = JSON.parse(savedRaws);
     else rawMaterials = { ...defaultRawMaterials };
 
-    const savedProds = localStorage.getItem('mp_products_v4');
+    const savedProds = localStorage.getItem('mp_products_v44');
     if (savedProds) products = JSON.parse(savedProds);
     else products = JSON.parse(JSON.stringify(defaultProducts));
 
-    const savedBgs = localStorage.getItem('mp_bg_list_v4');
+    const savedBgs = localStorage.getItem('mp_bg_list_v44');
     if (savedBgs) bgImages = JSON.parse(savedBgs);
 
-    const savedSs = localStorage.getItem('mp_slideshow_active');
+    const savedSs = localStorage.getItem('mp_slideshow_active_v44');
     if (savedSs !== null) slideshowActive = JSON.parse(savedSs);
 
-    const savedSsTime = localStorage.getItem('mp_slideshow_time');
+    const savedSsTime = localStorage.getItem('mp_slideshow_time_v44');
     if (savedSsTime) slideshowTime = Number(savedSsTime);
   } catch (e) {
     rawMaterials = { ...defaultRawMaterials };
@@ -319,11 +310,11 @@ window.addEventListener('load', function() {
 
   function saveData() {
     try {
-      localStorage.setItem('mp_raw_prices_v4', JSON.stringify(rawMaterials));
-      localStorage.setItem('mp_products_v4', JSON.stringify(products));
-      localStorage.setItem('mp_bg_list_v4', JSON.stringify(bgImages));
-      localStorage.setItem('mp_slideshow_active', JSON.stringify(slideshowActive));
-      localStorage.setItem('mp_slideshow_time', slideshowTime);
+      localStorage.setItem('mp_raw_prices_v44', JSON.stringify(rawMaterials));
+      localStorage.setItem('mp_products_v44', JSON.stringify(products));
+      localStorage.setItem('mp_bg_list_v44', JSON.stringify(bgImages));
+      localStorage.setItem('mp_slideshow_active_v44', JSON.stringify(slideshowActive));
+      localStorage.setItem('mp_slideshow_time_v44', slideshowTime);
     } catch(e) {}
   }
 
@@ -404,7 +395,7 @@ window.addEventListener('load', function() {
   }
 
   document.getElementById('btnAddRawMat').onclick = function() {
-    const matName = prompt('請輸入打怪掉落物或雜物名稱 (例如: 樹枝、動物皮毛、螺絲)：');
+    const matName = prompt('請輸入打怪掉落物或雜物名稱：');
     if (matName && matName.trim()) {
       const name = matName.trim();
       if (!(name in rawMaterials)) {
@@ -612,11 +603,14 @@ window.addEventListener('load', function() {
     }
   };
 
-  // 背景幻燈片與相冊控制
-  function applyBgImage() {
+  // 側邊相冊控制
+  function applySideGalleryImages() {
     if (bgImages.length > 0) {
       if (currentBgIndex >= bgImages.length) currentBgIndex = 0;
-      document.body.style.backgroundImage = `url('${bgImages[currentBgIndex]}')`;
+      const currentImgUrl = bgImages[currentBgIndex];
+      // 左右兩側顯示同一張或交錯皆可，此處設定左右同步顯示完整圖片
+      document.getElementById('leftGalleryImg').src = currentImgUrl;
+      document.getElementById('rightGalleryImg').src = currentImgUrl;
     }
     renderBgThumbs();
   }
@@ -624,14 +618,14 @@ window.addEventListener('load', function() {
   function nextBg() {
     if (bgImages.length > 0) {
       currentBgIndex = (currentBgIndex + 1) % bgImages.length;
-      applyBgImage();
+      applySideGalleryImages();
     }
   }
 
   function prevBg() {
     if (bgImages.length > 0) {
       currentBgIndex = (currentBgIndex - 1 + bgImages.length) % bgImages.length;
-      applyBgImage();
+      applySideGalleryImages();
     }
   }
 
@@ -665,7 +659,7 @@ window.addEventListener('load', function() {
     const container = document.getElementById('bgThumbsContainer');
     container.innerHTML = bgImages.map((img, idx) => `
       <div class="bg-thumb-item ${idx === currentBgIndex ? 'active' : ''}" data-idx="${idx}">
-        <img src="${img}" alt="背景">
+        <img src="${img}" alt="相冊預覽">
         <button class="bg-thumb-del" data-idx="${idx}">✕</button>
       </div>
     `).join('');
@@ -674,7 +668,7 @@ window.addEventListener('load', function() {
       el.onclick = function(e) {
         if (e.target.tagName !== 'BUTTON') {
           currentBgIndex = Number(this.getAttribute('data-idx'));
-          applyBgImage();
+          applySideGalleryImages();
         }
       };
     });
@@ -684,7 +678,7 @@ window.addEventListener('load', function() {
         e.stopPropagation();
         bgImages.splice(Number(this.getAttribute('data-idx')), 1);
         saveData();
-        applyBgImage();
+        applySideGalleryImages();
       };
     });
   }
@@ -695,7 +689,7 @@ window.addEventListener('load', function() {
       bgImages.push(input.value.trim());
       saveData();
       currentBgIndex = bgImages.length - 1;
-      applyBgImage();
+      applySideGalleryImages();
       input.value = '';
     }
   };
@@ -711,7 +705,7 @@ window.addEventListener('load', function() {
           if (loaded === this.files.length) {
             saveData();
             currentBgIndex = bgImages.length - 1;
-            applyBgImage();
+            applySideGalleryImages();
           }
         };
         reader.readAsDataURL(file);
@@ -719,22 +713,12 @@ window.addEventListener('load', function() {
     }
   };
 
-  document.getElementById('panelOpacityRange').oninput = function() {
-    document.getElementById('mainContainer').style.background = `rgba(255, 255, 255, ${this.value})`;
-    document.getElementById('panelOpacityVal').innerText = Math.round(this.value * 100) + '%';
-  };
-
-  document.getElementById('overlayRange').oninput = function() {
-    document.getElementById('bgOverlay').style.background = `rgba(0, 0, 0, ${this.value})`;
-    document.getElementById('overlayVal').innerText = Math.round(this.value * 100) + '%';
-  };
-
   // 初始化
   renderMarketGrid();
   renderProductDropdown();
   renderProductManagement();
   onProductChange();
-  applyBgImage();
+  applySideGalleryImages();
   updateSlideshowTimer();
 });
 </script>
