@@ -336,20 +336,19 @@
     </div>
   </div>
 
-  <!-- 經驗與打怪效率計算機頁面 (支援多人分頁、署名、手key分鐘數、保留觸角尾巴、清空數字) -->
+  <!-- 經驗與打怪效率計算機頁面 (具備獨立分頁與游標鎖定防跳機制) -->
   <div id="tabContent-exp" class="tab-content">
     <div class="section-title">
-      <span>👥 多人分頁／署名管理</span>
+      <span>👥 多人分頁／署名管理 (各自獨立不干擾)</span>
       <div style="display:flex; gap:6px;">
-        <button class="btn-sm btn-add" id="btnAddExpTab">➕ 新增分頁</button>
+        <button class="btn-sm btn-add" id="btnAddExpTab">➕ 新增獨立分頁</button>
         <button class="btn-sm btn-danger" id="btnDelExpTab">🗑️ 刪除當前分頁</button>
       </div>
     </div>
-    <!-- 子分頁按鈕列 -->
     <div id="expTabsList" style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:15px; background:rgba(0,0,0,0.04); padding:10px; border-radius:8px;"></div>
 
     <div style="background:rgba(255,255,255,0.95); padding:15px; border-radius:10px; margin-bottom:15px; border:1px solid #ddd; display:flex; gap:10px; align-items:center;">
-      <label style="font-weight:bold; font-size:13px; white-space:nowrap;">✏️ 分頁署名／記號：</label>
+      <label style="font-weight:bold; font-size:13px; white-space:nowrap;">✏️ 本分頁署名／記號：</label>
       <input type="text" id="expSubTabAuthor" placeholder="例如：小明的測試區" style="flex:1; font-weight:bold; color:#1f497d;">
       <button class="btn-sm btn-primary" id="btnClearExpNumbers" style="background:#f0ad4e;">🧹 清空數字（保留尾巴與觸角）</button>
     </div>
@@ -488,7 +487,7 @@
       <div class="bg-thumbs" id="bgThumbsContainer"></div>
     </div>
 
-    <div class="section-title">🖼️ 2. 橫版頂部大橫幅相冊管理</div>
+    <div class="section-title">🖼️️ 2. 橫版頂部大橫幅相冊管理</div>
     <div class="bg-setting-panel">
       <div style="margin-bottom: 12px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
         <label style="font-weight:bold;">上傳電腦圖片：</label>
@@ -555,7 +554,7 @@ const dbRef = db.ref('maple_calculator_v493');
 window.addEventListener('load', function() {
 
   const defaultExpTab = {
-    author: "預設分頁",
+    author: "成員測試分頁",
     testMinutes: 60,
     expStart: 0,
     expEnd: 0,
@@ -621,6 +620,7 @@ window.addEventListener('load', function() {
     }
   });
 
+  // 監聽雲端資料，但如果是正在打字的當下，略過重複渲染以防游標跳掉
   dbRef.on('value', (snapshot) => {
     const val = snapshot.val();
     if (val) {
@@ -636,7 +636,11 @@ window.addEventListener('load', function() {
     statusEl.innerText = "☁️ 雲端同步完成";
     statusEl.className = "";
     
-    if (!isLocalUpdating) {
+    // 如果使用者正在分頁輸入框內打字，不強制重新渲染整個畫面，避免跳掉
+    const activeElem = document.activeElement;
+    const isTypingInExp = activeElem && activeElem.closest('#tabContent-exp');
+
+    if (!isLocalUpdating && !isTypingInExp) {
       refreshUI();
     }
     isLocalUpdating = false;
@@ -901,7 +905,7 @@ window.addEventListener('load', function() {
     }
   }
 
-  // 經驗與打怪效率計算機子分頁邏輯
+  // 經驗計算機子分頁渲染與資料同步
   function renderExpTabs() {
     const tabsList = document.getElementById('expTabsList');
     if (!appData.expTabs || appData.expTabs.length === 0) {
@@ -1070,7 +1074,6 @@ window.addEventListener('load', function() {
       tab.cherryStart = 0;
       tab.cherryEnd = 0;
 
-      // 嚴格保留掉落物中的尾巴與觸角，僅將其他非尾巴/觸角的數量歸零或過濾
       if (tab.dropItems) {
         tab.dropItems.forEach(item => {
           if (item.name !== '尾巴' && item.name !== '觸角') {
