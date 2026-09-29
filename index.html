@@ -2,103 +2,1574 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
-  <title>經驗與打怪效率計算機</title>
-  <!-- 引入 Tailwind CSS 與 Firebase SDK 視專案需求引入 -->
-  <script src="https://cdn.tailwindcss.com"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>楓之谷成本計算機</title>
+  
+  <!-- 自訂分頁圖示 -->
+  <link rel="icon" type="image/png" href="https://icons.iconarchive.com/icons/raindropmemory/legend-of-mushroom/128/Maple-icon.png">
+
+  <!-- 引入 Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      padding: 20px;
+      margin: 0;
+      color: #222;
+      background-color: #1a1a1a;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    #cloudSyncStatus {
+      position: fixed;
+      top: 10px;
+      right: 15px;
+      background: rgba(40, 167, 69, 0.9);
+      color: white;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: bold;
+      z-index: 1000;
+      backdrop-filter: blur(4px);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    #cloudSyncStatus.syncing {
+      background: rgba(255, 193, 7, 0.9);
+      color: #333;
+    }
+
+    .side-gallery {
+      position: fixed;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 220px;
+      height: 450px;
+      background: rgba(0, 0, 0, 0.6);
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(5px);
+      z-index: 10;
+    }
+    .side-left { left: 25px; }
+    .side-right { right: 25px; }
+    .side-gallery img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      transition: opacity 0.6s ease-in-out;
+    }
+
+    @media (max-width: 1350px) {
+      .side-gallery { display: none; }
+    }
+
+    .top-banner-gallery {
+      width: 100%;
+      max-width: 880px;
+      height: 200px;
+      background: rgba(0, 0, 0, 0.6);
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 20px;
+      backdrop-filter: blur(5px);
+      position: relative;
+    }
+    .top-banner-gallery img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: opacity 0.6s ease-in-out;
+    }
+    .top-banner-controls {
+      position: absolute;
+      bottom: 10px;
+      right: 15px;
+      display: flex;
+      gap: 6px;
+      background: rgba(0,0,0,0.5);
+      padding: 4px 8px;
+      border-radius: 20px;
+      backdrop-filter: blur(4px);
+    }
+    .top-banner-controls button {
+      background: none;
+      border: none;
+      color: white;
+      font-size: 12px;
+      cursor: pointer;
+      font-weight: bold;
+      padding: 2px 6px;
+    }
+
+    .container {
+      position: relative;
+      z-index: 2;
+      width: 100%;
+      max-width: 880px;
+      background: rgba(255, 255, 255, 0.92);
+      padding: 25px;
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+      backdrop-filter: blur(8px);
+      margin-bottom: 20px;
+    }
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+      border-bottom: 2px solid rgba(0,0,0,0.1);
+      padding-bottom: 10px;
+      flex-wrap: wrap;
+    }
+    .tab-btn {
+      padding: 8px 14px;
+      border: none;
+      background: rgba(255, 255, 255, 0.8);
+      color: #333;
+      font-size: 14px;
+      font-weight: bold;
+      border-radius: 8px;
+      cursor: pointer;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.08);
+      transition: all 0.2s;
+    }
+    .tab-btn.active {
+      background: #c55a11 !important;
+      color: #ffffff !important;
+    }
+    .tab-content { display: none; }
+    .tab-content.active { display: block !important; }
+
+    h2 { margin-top: 0; color: #c55a11; display: flex; justify-content: space-between; align-items: center; font-size: 22px; flex-wrap: wrap; gap: 10px; }
+    .section-title {
+      font-weight: bold; margin-top: 20px; margin-bottom: 12px; color: #1f497d; font-size: 16px;
+      border-left: 4px solid #1f497d; padding-left: 8px; display: flex; justify-content: space-between; align-items: center;
+    }
+    .btn-sm { padding: 6px 12px; font-size: 13px; border-radius: 6px; border: none; cursor: pointer; font-weight: bold; }
+    .btn-add { background: #28a745; color: white; }
+    .btn-add:hover { background: #218838; }
+    .btn-secondary { background: #6c757d; color: white; }
+    .btn-danger { background: #dc3545; color: white; }
+    .btn-danger:hover { background: #c82333; }
+    .btn-primary { background: #007bff; color: white; }
+    .btn-primary:hover { background: #0056b3; }
+
+    .price-market-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 12px;
+      background: rgba(255, 255, 255, 0.95);
+      padding: 15px;
+      border-radius: 12px;
+      border: 1px solid rgba(0,0,0,0.1);
+    }
+    .price-item { display: flex; flex-direction: column; background: #f8f9fa; padding: 10px; border-radius: 8px; border: 1px solid #eee; position: relative; }
+    .price-item label { font-size: 13px; font-weight: bold; color: #333; margin-bottom: 4px; }
+    .price-subtext { font-size: 11px; color: #666; margin-top: 4px; }
+    .mat-del-btn { position: absolute; top: 6px; right: 6px; background: none; border: none; color: #dc3545; font-size: 14px; cursor: pointer; }
+
+    select, input { padding: 8px 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; width: 100%; outline: none; background: #fff; }
+
+    .product-select-box { background: rgba(255, 255, 255, 0.95); border: 2px solid #c55a11; padding: 15px; border-radius: 12px; margin-top: 15px; }
+    .recipe-list-box { margin-top: 10px; background: rgba(240, 244, 248, 0.9); padding: 12px; border-radius: 8px; font-size: 14px; }
+    .recipe-item { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px dashed #ccc; }
+
+    .card-result { background: rgba(255, 248, 230, 0.95); border-left: 6px solid #ffc000; padding: 20px; border-radius: 10px; margin-top: 20px; }
+    .result-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 15px; }
+    .result-row.total { font-size: 18px; font-weight: bold; color: #c55a11; }
+    .result-row.profit { font-size: 20px; font-weight: bold; border-top: 1px dashed #d9b26a; padding-top: 10px; margin-top: 10px; }
+
+    .product-manage-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(255, 255, 255, 0.95);
+      padding: 12px 16px;
+      border-radius: 8px;
+      border: 1px solid #ddd;
+      margin-bottom: 8px;
+      gap: 10px;
+    }
+    .product-manage-info { display: flex; flex-direction: column; flex: 1; }
+    .product-manage-title { font-weight: bold; font-size: 16px; color: #1f497d; }
+    .product-manage-sub { font-size: 12px; color: #666; margin-top: 2px; }
+    .product-manage-actions { display: flex; gap: 6px; }
+
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(3px);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 2000;
+    }
+    .modal-overlay.active { display: flex; }
+    .modal-card {
+      background: #ffffff;
+      width: 90%;
+      max-width: 600px;
+      max-height: 90vh;
+      overflow-y: auto;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+
+    .bg-setting-panel { background: rgba(255, 255, 255, 0.9); padding: 15px; border-radius: 10px; margin-bottom: 15px; font-size: 13px; border: 1px solid rgba(0,0,0,0.1); }
+    .bg-thumbs { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+    .bg-thumb-item { position: relative; width: 80px; height: 60px; border-radius: 6px; overflow: hidden; border: 2px solid transparent; background: #ddd; }
+    .bg-thumb-item.active { border-color: #c55a11; }
+    .bg-thumb-item img { width: 100%; height: 100%; object-fit: cover; cursor: pointer; }
+    .bg-thumb-del { position: absolute; top: 2px; right: 2px; background: rgba(220,53,69,0.85); color: white; border: none; border-radius: 50%; width: 18px; height: 18px; font-size: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+
+    .exp-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+      background: rgba(255, 255, 255, 0.95);
+      padding: 18px;
+      border-radius: 12px;
+      border: 1px solid #ddd;
+      margin-bottom: 15px;
+    }
+    @media (max-width: 650px) {
+      .exp-grid { grid-template-columns: 1fr; }
+    }
+    .exp-field { display: flex; flex-direction: column; gap: 5px; }
+    .exp-field label { font-size: 13px; font-weight: bold; color: #333; }
+    .drop-item-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 8px;
+      background: #f8f9fa;
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 1px solid #eee;
+    }
+  </style>
 </head>
-<body class="bg-gray-100 p-6">
-  <div class="max-w-4xl mx-auto bg-white rounded-lg shadow p-6">
-    
-    <h1 class="text-2xl font-bold mb-4 text-gray-800">經驗與打怪效率計算機</h1>
+<body>
 
-    <!-- 分頁導覽列 -->
-    <div id="tabsContainer" class="flex flex-wrap gap-2 mb-6 border-b pb-4">
-      <!-- 動態生成分頁按鈕 -->
+<div id="cloudSyncStatus">☁ 雲端同步中...</div>
+
+<div class="side-gallery side-left">
+  <img id="leftGalleryImg" src="" alt="左側直版相冊">
+</div>
+<div class="side-gallery side-right">
+  <img id="rightGalleryImg" src="" alt="右側直版相冊">
+</div>
+
+<div class="top-banner-gallery">
+  <img id="topBannerImg" src="" alt="頂部橫版相冊">
+  <div class="top-banner-controls">
+    <button id="btnPrevBanner">◀ 上一張</button>
+    <button id="btnNextBanner">下一張 ▶</button>
+  </div>
+</div>
+
+<div class="container" id="mainContainer">
+  <h2>
+    <span>🍁 楓之谷成本計算機</span>
+    <div style="display:flex; gap:8px;">
+      <button class="btn-sm btn-secondary" id="btnPrevBg">◀ 側邊上一張</button>
+      <button class="btn-sm btn-secondary" id="btnNextBg">側邊下一張 ▶</button>
     </div>
-    <button onclick="addNewTab()" class="mb-4 bg-green-500 text-white px-3 py-1 rounded text-sm">+ 新增計算分頁</button>
+  </h2>
 
-    <!-- 當前分頁內容區域 -->
-    <div id="tabContent" class="space-y-6">
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="tabContent-calc">🧮 快速選成品計算</button>
+    <button class="tab-btn" data-tab="tabContent-exp">📊 經驗與打怪效率計算機</button>
+    <button class="tab-btn" data-tab="tabContent-manage">📜 管理成品</button>
+    <button class="tab-btn" data-tab="tabContent-add">➕ 新增成品配方</button>
+    <button class="tab-btn" data-tab="tabContent-settings" id="btnTabSettings">⚙️ 設定</button>
+  </div>
+
+  <div id="tabContent-calc" class="tab-content active">
+    <div class="section-title">
+      <span>1. 輸入基礎「母礦」或「打怪雜物」單價 (即時連動更新)</span>
+      <button class="btn-sm btn-add" id="btnAddRawMat">➕ 新增母礦/打怪雜物</button>
+    </div>
+    <div class="price-market-grid" id="marketPriceGrid"></div>
+
+    <div class="section-title"><span>2. 選擇欲製作的成品 / 裝備 / 合成物與測試市場價格</span></div>
+    <div class="product-select-box">
+      <label style="font-weight:bold; font-size:15px; color:#c55a11; display:block; margin-bottom:8px;">選擇項目：</label>
+      <select id="productSelect" style="font-size:16px; padding:10px; font-weight:bold;"></select>
       
-      <!-- 署名設定 -->
-      <div>
-        <label class="block text-sm font-semibold text-gray-600">分頁署名 / 記號：</label>
-        <input type="text" id="tabName" oninput="updateTabMeta()" class="border rounded p-1 w-full max-w-xs" placeholder="例如：小明的測試區">
+      <div style="margin-top: 12px; display: flex; align-items: center; gap: 10px; background: rgba(255, 255, 255, 0.8); padding: 8px 12px; border-radius: 8px; border: 1px solid #ddd;">
+        <span style="font-weight: bold; font-size: 13px; color: #1f497d; white-space: nowrap;">🏷️ 當前市場售價 / 最低價：</span>
+        <input type="text" id="inlineMarketPrice" class="comma-input" placeholder="請手動輸入要測試的拍賣售價" style="font-weight: bold; color: #c55a11;">
       </div>
 
-      <!-- 1. 測試時間區間 (改為手動輸入分鐘) -->
-      <div>
-        <label class="block text-sm font-bold text-gray-700 mb-1">⏱️ 1. 測試時間區間 (分鐘)：</label>
-        <input type="number" id="testMinutes" oninput="saveData()" class="w-full border rounded p-2" placeholder="請輸入分鐘數">
-      </div>
+      <div class="recipe-list-box" id="recipeDetailsBox"></div>
+    </div>
 
-      <!-- 2. 經驗值與楓幣統計 -->
-      <div>
-        <h2 class="font-bold text-gray-700 mb-2">📊 2. 經驗值與楓幣統計</h2>
-        <div class="grid grid-cols-2 gap-4">
-          <input type="number" id="expStart" oninput="saveData()" placeholder="開始經驗值" class="border p-2 rounded">
-          <input type="number" id="expEnd" oninput="saveData()" placeholder="結束經驗值" class="border p-2 rounded">
-          <input type="number" id="mesoStart" oninput="saveData()" placeholder="開始楓幣" class="border p-2 rounded">
-          <input type="number" id="mesoEnd" oninput="saveData()" placeholder="結束楓幣" class="border p-2 rounded">
-        </div>
-      </div>
-
-      <!-- 3. 掉落物統計 (特別保留：尾巴、觸角與價錢) -->
-      <div class="border-t pt-4">
-        <h2 class="font-bold text-gray-700 mb-2">🎒 3. 掉落物統計</h2>
-        <div class="space-y-2">
-          <div class="flex gap-4 items-center">
-            <span class="w-24 font-medium">尾巴</span>
-            <input type="number" id="itemTailQty" oninput="saveData()" placeholder="數量" class="border p-1 rounded w-32">
-            <input type="number" id="itemTailPrice" oninput="saveData()" placeholder="單價" class="border p-1 rounded w-32">
-          </div>
-          <div class="flex gap-4 items-center">
-            <span class="w-24 font-medium">觸角</span>
-            <input type="number" id="itemAntennaQty" oninput="saveData()" placeholder="數量" class="border p-1 rounded w-32">
-            <input type="number" id="itemAntennaPrice" oninput="saveData()" placeholder="單價" class="border p-1 rounded w-32">
-          </div>
-        </div>
-      </div>
-
-      <!-- 操作按鈕列 -->
-      <div class="flex gap-4 pt-4 border-t">
-        <button onclick="clearNumbersKeepDrops()" class="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600">
-          清空數字（保留尾巴、觸角與價錢）
-        </button>
-      </div>
-
+    <div class="card-result">
+      <div class="result-row total"><span>總製作成本：</span><span id="totalCost">0 楓幣</span></div>
+      <div class="result-row"><span>扣除 3% 交易稅後淨收：</span><span id="netIncome">0 楓幣</span></div>
+      <div class="result-row profit"><span>預期純利潤：</span><span id="profit">0 楓幣</span></div>
+      <div id="profitAdvice" style="font-size: 13px; margin-top: 8px; font-weight: bold;"></div>
     </div>
   </div>
 
-  <script>
-    // 邏輯範例：點擊清空數字，但保留尾巴、觸角及其對應的數量與單價
-    function clearNumbersKeepDrops() {
-      // 清空時間與經驗、楓幣欄位
-      document.getElementById('testMinutes').value = '';
-      document.getElementById('expStart').value = '';
-      document.getElementById('expEnd').value = '';
-      document.getElementById('mesoStart').value = '';
-      document.getElementById('mesoEnd').value = '';
-      
-      // 注意：這裡刻意不清除 itemTailQty, itemTailPrice, itemAntennaQty, itemAntennaPrice
-      // 藉此達到「保留尾巴、觸角跟他們的價錢」的需求
-      
-      alert('已清空時間與經驗楓幣數據，已保留尾巴與觸角的數量及價錢！');
-      saveData(); // 同步到資料庫
+  <!-- 經驗與打怪效率計算機頁面 (支援多人分頁、署名、手key分鐘數、保留觸角尾巴、清空數字) -->
+  <div id="tabContent-exp" class="tab-content">
+    <div class="section-title">
+      <span>👥 多人分頁／署名管理</span>
+      <div style="display:flex; gap:6px;">
+        <button class="btn-sm btn-add" id="btnAddExpTab">➕ 新增分頁</button>
+        <button class="btn-sm btn-danger" id="btnDelExpTab">🗑️ 刪除當前分頁</button>
+      </div>
+    </div>
+    <!-- 子分頁按鈕列 -->
+    <div id="expTabsList" style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:15px; background:rgba(0,0,0,0.04); padding:10px; border-radius:8px;"></div>
+
+    <div style="background:rgba(255,255,255,0.95); padding:15px; border-radius:10px; margin-bottom:15px; border:1px solid #ddd; display:flex; gap:10px; align-items:center;">
+      <label style="font-weight:bold; font-size:13px; white-space:nowrap;">✏️ 分頁署名／記號：</label>
+      <input type="text" id="expSubTabAuthor" placeholder="例如：小明的測試區" style="flex:1; font-weight:bold; color:#1f497d;">
+      <button class="btn-sm btn-primary" id="btnClearExpNumbers" style="background:#f0ad4e;">🧹 清空數字（保留尾巴與觸角）</button>
+    </div>
+
+    <div class="section-title"><span>⏱️ 1. 測試時間區間</span></div>
+    <div class="exp-grid">
+      <div class="exp-field" style="grid-column: 1 / -1;">
+        <label>測試時間 (分鐘)：</label>
+        <input type="number" id="expTestMinutes" class="comma-input" value="60" placeholder="例如：60" style="font-size: 15px; font-weight: bold; color: #c55a11;">
+      </div>
+    </div>
+
+    <div class="section-title"><span>📈 2. 經驗值與楓幣統計</span></div>
+    <div class="exp-grid">
+      <div class="exp-field">
+        <label>開始經驗值：</label>
+        <input type="text" id="expStart" class="comma-input" value="0">
+      </div>
+      <div class="exp-field">
+        <label>結束經驗值：</label>
+        <input type="text" id="expEnd" class="comma-input" value="0">
+      </div>
+      <div class="exp-field">
+        <label>開始楓幣：</label>
+        <input type="text" id="mesosStart" class="comma-input" value="0">
+      </div>
+      <div class="exp-field">
+        <label>結束楓幣 (自身獲得楓幣)：</label>
+        <input type="text" id="mesosEnd" class="comma-input" value="0">
+      </div>
+    </div>
+
+    <div class="section-title">
+      <span>🎒 3. 掉落物統計與收益 (自動計入楓幣收入)</span>
+      <button class="btn-sm btn-add" id="btnAddDropItem">➕ 新增掉落物項目</button>
+    </div>
+    <div id="dropItemsContainer" style="margin-bottom: 15px;"></div>
+
+    <div class="exp-grid" style="margin-bottom: 15px;">
+      <div class="exp-field" style="grid-column: 1 / -1;">
+        <label>⚔️ 掉落武器數量 (每件固定 400,000 楓幣)：</label>
+        <input type="text" id="dropWeaponQty" class="comma-input" value="0">
+      </div>
+    </div>
+
+    <div class="section-title"><span>🧪 4. 消耗品開銷統計</span></div>
+    <div class="exp-grid">
+      <div class="exp-field">
+        <label>使用 HP水 單價：</label>
+        <input type="text" id="hpPrice" class="comma-input" value="0">
+      </div>
+      <div class="exp-field">
+        <label>HP水數量 (開始 ➔ 結束)：</label>
+        <div style="display:flex; gap:6px; align-items:center;">
+          <input type="text" id="hpStart" class="comma-input" value="0" placeholder="開始">
+          <span>➔</span>
+          <input type="text" id="hpEnd" class="comma-input" value="0" placeholder="結束">
+        </div>
+      </div>
+
+      <div class="exp-field">
+        <label>使用 MP水 單價：</label>
+        <input type="text" id="mpPrice" class="comma-input" value="0">
+      </div>
+      <div class="exp-field">
+        <label>MP水數量 (開始 ➔ 結束)：</label>
+        <div style="display:flex; gap:6px; align-items:center;">
+          <input type="text" id="mpStart" class="comma-input" value="0" placeholder="開始">
+          <span>➔</span>
+          <input type="text" id="mpEnd" class="comma-input" value="0" placeholder="結束">
+        </div>
+      </div>
+
+      <div class="exp-field">
+        <label>使用 櫻桃派/超水 單價：</label>
+        <input type="text" id="cherryPrice" class="comma-input" value="0">
+      </div>
+      <div class="exp-field">
+        <label>櫻桃派/超水數量 (開始 ➔ 結束)：</label>
+        <div style="display:flex; gap:6px; align-items:center;">
+          <input type="text" id="cherryStart" class="comma-input" value="0" placeholder="開始">
+          <span>➔</span>
+          <input type="text" id="cherryEnd" class="comma-input" value="0" placeholder="結束">
+        </div>
+      </div>
+    </div>
+
+    <div class="card-result">
+      <div class="result-row"><span>總獲得經驗值：</span><span id="resTotalExp" style="font-weight:bold; color:#1f497d;">0</span></div>
+      <div class="result-row"><span>打怪楓幣淨收益 (+掉落物+武器 - 藥水開銷)：</span><span id="resTotalMesos" style="font-weight:bold; color:#c55a11;">0 楓幣</span></div>
+      <hr style="border:0; border-top:1px dashed #d9b26a; margin:10px 0;">
+      <div class="result-row"><span>⏱️ 平均每 10 分鐘經驗值：</span><span id="resExp10m" style="font-weight:bold;">0</span></div>
+      <div class="result-row"><span>⏱️ 平均每 10 分鐘楓幣淨收益：</span><span id="resMesos10m" style="font-weight:bold;">0 楓幣</span></div>
+      <div class="result-row profit"><span>🚀 平均每 1 小時經驗值：</span><span id="resExp1h" style="color:#1f497d;">0</span></div>
+      <div class="result-row profit"><span>💰 平均每 1 小時楓幣淨收益：</span><span id="resMesos1h" style="color:#c55a11;">0 楓幣</span></div>
+    </div>
+  </div>
+
+  <div id="tabContent-manage" class="tab-content">
+    <div class="section-title"><span>成品清單管理 (點擊編輯或刪除)</span></div>
+    <div style="font-size:12px; color:#555; margin-bottom:12px;">
+      💡 提示：點擊右側的筆（編輯）可以修改配方與預設市場價格，點擊垃圾桶則可直接刪除該成品。
+    </div>
+    <div id="productManageList"></div>
+  </div>
+
+  <div id="tabContent-add" class="tab-content">
+    <div class="section-title"><span>➕ 建立新的合成配方或裝備</span></div>
+    <div style="background: rgba(255,255,255,0.95); padding: 20px; border-radius: 12px; border: 1px solid #ddd;">
+      <div style="margin-bottom: 15px;">
+        <label style="font-weight:bold; display:block; margin-bottom:5px;">成品名稱：</label>
+        <input type="text" id="newProdNameInput" placeholder="例如：黃金長劍、高級寶石...">
+      </div>
+      <div style="margin-bottom: 15px;">
+        <label style="font-weight:bold; cursor:pointer; color:#c55a11;">
+          <input type="checkbox" id="newProdIsOreCb"> 是否為母礦煉製物 (例如 10個母礦煉成1個)
+        </label>
+      </div>
+      <button class="btn-sm btn-add" id="btnConfirmAddProduct" style="width:100%; padding: 10px; font-size:15px;">確認新增此項目</button>
+    </div>
+  </div>
+
+  <div id="tabContent-settings" class="tab-content">
+    <div class="section-title">🖼️ 1. 直版側邊相冊管理</div>
+    <div class="bg-setting-panel">
+      <div style="margin-bottom: 12px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+        <label style="font-weight:bold;">上傳電腦圖片：</label>
+        <input type="file" id="bgFileInput" accept="image/*" style="flex:1; background:white;">
+      </div>
+      <div style="margin-bottom: 12px; display:flex; gap:10px; align-items:center;">
+        <label style="font-weight:bold;">圖片網址（雲端）：</label>
+        <input type="text" id="bgUrlInput" placeholder="貼上公開圖片網址 http..." style="flex:1;">
+        <button class="btn-sm btn-secondary" id="btnAddBgUrl">新增網址</button>
+      </div>
+      <div style="font-weight:bold; margin-top:10px;">目前直版相冊清單：</div>
+      <div class="bg-thumbs" id="bgThumbsContainer"></div>
+    </div>
+
+    <div class="section-title">🖼️ 2. 橫版頂部大橫幅相冊管理</div>
+    <div class="bg-setting-panel">
+      <div style="margin-bottom: 12px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+        <label style="font-weight:bold;">上傳電腦圖片：</label>
+        <input type="file" id="bannerFileInput" accept="image/*" style="flex:1; background:white;">
+      </div>
+      <div style="margin-bottom: 12px; display:flex; gap:10px; align-items:center;">
+        <label style="font-weight:bold;">圖片網址（雲端）：</label>
+        <input type="text" id="bannerUrlInput" placeholder="貼上公開橫版圖片網址 http..." style="flex:1;">
+        <button class="btn-sm btn-secondary" id="btnAddBannerUrl">新增橫版網址</button>
+      </div>
+      <div style="font-weight:bold; margin-top:10px;">目前橫版相冊清單：</div>
+      <div class="bg-thumbs" id="bannerThumbsContainer"></div>
+    </div>
+
+    <div class="section-title">🎞️ 相冊自動輪播設定</div>
+    <div class="bg-setting-panel">
+      <div style="margin-bottom: 12px; display:flex; align-items:center; gap:15px; flex-wrap:wrap;">
+        <label style="font-weight:bold; cursor:pointer;">
+          <input type="checkbox" id="slideshowToggle"> 啟用自動輪播相冊
+        </label>
+        <div>
+          切換間隔：
+          <select id="slideshowInterval" style="width:110px; display:inline-block;">
+            <option value="5000">每 5 秒</option>
+            <option value="10000" selected>每 10 秒</option>
+            <option value="30000">每 30 秒</option>
+            <option value="60000">每 1 分鐘</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="editModal">
+  <div class="modal-card">
+    <h3 style="margin-top:0; color:#c55a11; display:flex; justify-content:space-between; align-items:center;">
+      <span>✏️ 編輯成品 / 配方</span>
+      <button class="btn-sm btn-secondary" id="btnCloseModal">✕ 關閉</button>
+    </h3>
+    <div id="modalEditBody"></div>
+    <div style="margin-top: 20px; text-align: right;">
+      <button class="btn-sm btn-primary" id="btnSaveModal" style="padding: 8px 20px;">儲存變更</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyC-U8AEP7VymgBnaQ8DrrAuGWbrF6I8peE",
+  authDomain: "maple-calculator-a35a4.firebaseapp.com",
+  databaseURL: "https://maple-calculator-a35a4-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "maple-calculator-a35a4",
+  storageBucket: "maple-calculator-a35a4.firebasestorage.app",
+  messagingSenderId: "710154244131",
+  appId: "1:710154244131:web:582d7a622e953596432196",
+  measurementId: "G-9W9NZ46W2Z"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+const dbRef = db.ref('maple_calculator_v493');
+
+window.addEventListener('load', function() {
+
+  const defaultExpTab = {
+    author: "預設分頁",
+    testMinutes: 60,
+    expStart: 0,
+    expEnd: 0,
+    mesosStart: 0,
+    mesosEnd: 0,
+    dropItems: [
+      { name: "觸角", price: 303, qty: 0 },
+      { name: "尾巴", price: 310, qty: 0 }
+    ],
+    dropWeaponQty: 0,
+    hpPrice: 0,
+    hpStart: 0,
+    hpEnd: 0,
+    mpPrice: 0,
+    mpStart: 0,
+    mpEnd: 0,
+    cherryPrice: 0,
+    cherryStart: 0,
+    cherryEnd: 0
+  };
+
+  const defaultData = {
+    rawMaterials: {
+      "青銅母礦": 4500,
+      "鋼鐵母礦": 5000,
+      "木柴": 1000,
+      "堅硬羽毛": 2000,
+      "柔軟羽毛": 2500
+    },
+    products: [
+      { name: "青銅", isOreRecipe: true, oreName: "青銅母礦", craftFee: 300, marketPrice: 48000, ingredients: [] },
+      { name: "鋼鐵", isOreRecipe: true, oreName: "鋼鐵母礦", craftFee: 300, marketPrice: 53000, ingredients: [] },
+      {
+        name: "合成木材", isOreRecipe: false, craftFee: 0, marketPrice: 10000,
+        ingredients: [{ name: "木柴", qty: 5 }]
+      },
+      {
+        name: "青銅長劍", isOreRecipe: false, craftFee: 50000, marketPrice: 200000,
+        ingredients: [{ name: "青銅", qty: 3 }, { name: "木柴", qty: 10 }]
+      }
+    ],
+    expTabs: [JSON.parse(JSON.stringify(defaultExpTab))],
+    activeExpTabIdx: 0,
+    bgImages: ["https://images.unsplash.com/photo-1511447333015-45b65e60f6d5?auto=format&fit=crop&w=600&q=80"],
+    bannerImages: ["https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=1200&q=80"],
+    slideshowActive: false,
+    slideshowTime: 10000
+  };
+
+  let appData = JSON.parse(JSON.stringify(defaultData));
+  let currentBgIndex = 0;
+  let currentBannerIndex = 0;
+  let slideshowTimer = null;
+  let isLocalUpdating = false;
+  let editingProductIndex = null;
+
+  const statusEl = document.getElementById('cloudSyncStatus');
+
+  dbRef.once('value').then((snapshot) => {
+    const val = snapshot.val();
+    if (!val) {
+      dbRef.set(defaultData);
+    }
+  });
+
+  dbRef.on('value', (snapshot) => {
+    const val = snapshot.val();
+    if (val) {
+      appData = Object.assign({}, defaultData, val);
+      if (!appData.rawMaterials) appData.rawMaterials = defaultData.rawMaterials;
+      if (!appData.products) appData.products = defaultData.products;
+      if (!appData.expTabs || appData.expTabs.length === 0) appData.expTabs = [JSON.parse(JSON.stringify(defaultExpTab))];
+      if (appData.activeExpTabIdx === undefined || appData.activeExpTabIdx >= appData.expTabs.length) appData.activeExpTabIdx = 0;
+      if (!appData.bgImages) appData.bgImages = defaultData.bgImages;
+      if (!appData.bannerImages) appData.bannerImages = defaultData.bannerImages;
+    }
+    
+    statusEl.innerText = "☁️ 雲端同步完成";
+    statusEl.className = "";
+    
+    if (!isLocalUpdating) {
+      refreshUI();
+    }
+    isLocalUpdating = false;
+  }, (error) => {
+    statusEl.innerText = "⚠️ 雲端連線失敗";
+    statusEl.className = "syncing";
+  });
+
+  function saveDataToCloud() {
+    isLocalUpdating = true;
+    statusEl.innerText = "🔄 同步中...";
+    statusEl.className = "syncing";
+    dbRef.set(appData).then(() => {
+      statusEl.innerText = "☁️ 雲端同步完成";
+      statusEl.className = "";
+    }).catch(() => {
+      statusEl.innerText = "⚠️ 儲存失敗";
+      statusEl.className = "syncing";
+    });
+  }
+
+  function formatNumber(num) {
+    if (num === '' || num === null || isNaN(num)) return '';
+    return Number(num).toLocaleString('en-US');
+  }
+
+  function parseNumber(str) {
+    if (!str) return 0;
+    return Number(String(str).replace(/,/g, '')) || 0;
+  }
+
+  function bindCommaInputs() {
+    document.querySelectorAll('.comma-input').forEach(input => {
+      if (input.dataset.commaBound) return;
+      input.dataset.commaBound = "true";
+
+      input.addEventListener('focus', function() {
+        this.value = parseNumber(this.value) === 0 ? '' : parseNumber(this.value);
+      });
+
+      input.addEventListener('blur', function() {
+        const val = parseNumber(this.value);
+        this.value = formatNumber(val);
+        syncExpFormToData();
+      });
+
+      input.addEventListener('input', function() {
+        syncExpFormToData();
+      });
+    });
+  }
+
+  function syncRawMaterials() {
+    appData.products.forEach(p => {
+      if (p.isOreRecipe && p.oreName && !(p.oreName in appData.rawMaterials)) {
+        appData.rawMaterials[p.oreName] = 4500;
+      }
+      if (p.ingredients) {
+        p.ingredients.forEach(ing => {
+          const isProducedByOre = appData.products.some(prod => prod.name === ing.name && prod.isOreRecipe);
+          if (!isProducedByOre && ing.name && !(ing.name in appData.rawMaterials)) {
+            appData.rawMaterials[ing.name] = 0;
+          }
+        });
+      }
+    });
+  }
+
+  function getItemUnitPrice(itemName) {
+    if (itemName in appData.rawMaterials) return appData.rawMaterials[itemName];
+    const prod = appData.products.find(p => p.name === itemName);
+    if (prod && prod.isOreRecipe) {
+      const oreP = appData.rawMaterials[prod.oreName] || 0;
+      return (oreP * 10) + (prod.craftFee || 300);
+    }
+    if (prod && !prod.isOreRecipe) {
+      let cost = prod.craftFee || 0;
+      if (prod.ingredients) {
+        prod.ingredients.forEach(ing => { cost += getItemUnitPrice(ing.name) * ing.qty; });
+      }
+      return cost;
+    }
+    return 0;
+  }
+
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.onclick = function() {
+      const targetId = this.getAttribute('data-tab');
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+      document.getElementById(targetId).classList.add('active');
+      this.classList.add('active');
+    };
+  });
+
+  function renderMarketGrid() {
+    syncRawMaterials();
+    const grid = document.getElementById('marketPriceGrid');
+    const keys = Object.keys(appData.rawMaterials);
+
+    if (keys.length === 0) {
+      grid.innerHTML = '<div style="color:#888;">尚未有任何材料項目。</div>';
+      return;
     }
 
-    function saveData() {
-      // 這裡可以接 Firebase Realtime Database 進行即時同步儲存
-      // 例如 firebase.database().ref('calculator_tabs/' + currentTabId).set({...});
+    grid.innerHTML = keys.map(mat => {
+      const isUsed = appData.products.some(p => 
+        (p.isOreRecipe && p.oreName === mat) || 
+        (!p.isOreRecipe && p.ingredients && p.ingredients.some(ing => ing.name === mat))
+      );
+
+      return `
+        <div class="price-item" data-mat="${mat}">
+          ${!isUsed ? `<button class="mat-del-btn" title="刪除此雜物">✕</button>` : ''}
+          <label>${mat} (單價)</label>
+          <input type="text" class="mat-price-input comma-input" data-mat="${mat}" value="${formatNumber(appData.rawMaterials[mat])}">
+          <div class="price-subtext">打怪掉落 / 基礎材料</div>
+        </div>
+      `;
+    }).join('');
+
+    document.querySelectorAll('.mat-price-input').forEach(input => {
+      input.oninput = function() {
+        const rawVal = parseNumber(this.value);
+        appData.rawMaterials[this.getAttribute('data-mat')] = rawVal;
+        saveDataToCloud();
+        onProductChange();
+        renderProductManageList();
+      };
+    });
+
+    document.querySelectorAll('.mat-del-btn').forEach(btn => {
+      btn.onclick = function() {
+        const mat = this.closest('.price-item').getAttribute('data-mat');
+        if (confirm(`確定要刪除雜物「${mat}」嗎？`)) {
+          delete appData.rawMaterials[mat];
+          saveDataToCloud();
+          refreshUI();
+        }
+      };
+    });
+
+    bindCommaInputs();
+  }
+
+  document.getElementById('btnAddRawMat').onclick = function() {
+    const matName = prompt('請輸入打怪掉落物或雜物名稱：');
+    if (matName && matName.trim()) {
+      const name = matName.trim();
+      if (!(name in appData.rawMaterials)) {
+        appData.rawMaterials[name] = 0;
+        saveDataToCloud();
+        refreshUI();
+      } else {
+        alert('此項目已在清單中！');
+      }
+    }
+  };
+
+  function renderProductDropdown() {
+    const select = document.getElementById('productSelect');
+    const currentVal = select.value;
+    if (appData.products.length === 0) {
+      select.innerHTML = '<option value="">無項目，請至管理配方新增</option>';
+      document.getElementById('recipeDetailsBox').innerHTML = '無配方資訊';
+      return;
+    }
+    select.innerHTML = appData.products.map((p, idx) => `<option value="${idx}">${p.name} ${p.isOreRecipe ? '(母礦合成物)' : '(組合裝備)'}</option>`).join('');
+    if (currentVal !== "" && currentVal < appData.products.length) {
+      select.value = currentVal;
+    }
+  }
+
+  function onProductChange() {
+    const select = document.getElementById('productSelect');
+    const idx = select.value;
+    if (idx === "" || !appData.products[idx]) { calculate(); return; }
+
+    const product = appData.products[idx];
+    const box = document.getElementById('recipeDetailsBox');
+
+    const marketInput = document.getElementById('inlineMarketPrice');
+    if (!marketInput.dataset.userEdited || marketInput.dataset.currentProd !== product.name) {
+      marketInput.value = formatNumber(product.marketPrice || 0);
+      marketInput.dataset.currentProd = product.name;
+      marketInput.dataset.userEdited = "";
     }
 
-    function updateTabMeta() {
-      // 更新分頁標題與署名
+    if (product.isOreRecipe) {
+      const oreP = appData.rawMaterials[product.oreName] || 0;
+      const unitCost = (oreP * 10) + (product.craftFee || 300);
+      box.innerHTML = `
+        <div style="font-weight:bold; color:#1f497d; margin-bottom:4px;">⛏️ 母礦煉製公式：</div>
+        <div class="recipe-item"><span>• 10 個 ${product.oreName}</span><span>${formatNumber(oreP * 10)} 楓幣</span></div>
+        <div class="recipe-item" style="color:#c55a11; font-weight:bold;"><span>• 合成手續費</span><span>${formatNumber(product.craftFee || 300)} 楓幣</span></div>
+        <div style="margin-top:6px; font-weight:bold; color:#2e75b6; text-align:right;">總成本 = ${formatNumber(unitCost)} 楓幣</div>
+      `;
+    } else {
+      box.innerHTML = `
+        <div style="font-weight:bold; margin-bottom:6px; color:#1f497d;">📋 裝備組裝配方需求：</div>
+        ${(product.ingredients || []).map(ing => {
+          const unitPrice = getItemUnitPrice(ing.name);
+          return `<div class="recipe-item"><span>• ${ing.name} x${ing.qty} 個</span><span>單價: ${formatNumber(unitPrice)} (小計: ${formatNumber(unitPrice * ing.qty)})</span></div>`;
+        }).join('')}
+        <div class="recipe-item" style="color:#c55a11; font-weight:bold;"><span>• NPC 製作費</span><span>${formatNumber(product.craftFee || 0)} 楓幣</span></div>
+      `;
+    }
+    calculate();
+  }
+
+  document.getElementById('productSelect').onchange = function() {
+    document.getElementById('inlineMarketPrice').dataset.userEdited = "";
+    onProductChange();
+  };
+  
+  document.getElementById('inlineMarketPrice').oninput = function() {
+    this.dataset.userEdited = "true";
+    calculate();
+  };
+
+  function calculate() {
+    const select = document.getElementById('productSelect');
+    const idx = select.value;
+    if (idx === "" || !appData.products[idx]) {
+      document.getElementById('totalCost').innerText = '0 楓幣';
+      document.getElementById('netIncome').innerText = '0 楓幣';
+      document.getElementById('profit').innerText = '0 楓幣';
+      return;
     }
 
-    function addNewTab() {
-      // 新增分頁邏輯
+    const product = appData.products[idx];
+    
+    let totalCost = product.isOreRecipe ? ((appData.rawMaterials[product.oreName] || 0) * 10) + (product.craftFee || 300) : (product.craftFee || 0);
+    if (!product.isOreRecipe && product.ingredients) {
+      product.ingredients.forEach(ing => { 
+        totalCost += getItemUnitPrice(ing.name) * ing.qty; 
+      });
     }
-  </script>
+
+    const sellPrice = parseNumber(document.getElementById('inlineMarketPrice').value);
+    const netIncome = Math.floor(sellPrice * 0.97);
+    const profit = netIncome - totalCost;
+
+    document.getElementById('totalCost').innerText = formatNumber(totalCost) + ' 楓幣';
+    document.getElementById('netIncome').innerText = formatNumber(netIncome) + ' 楓幣';
+    document.getElementById('profit').innerText = formatNumber(profit) + ' 楓幣';
+
+    const profitEl = document.getElementById('profit');
+    const adviceEl = document.getElementById('profitAdvice');
+    if (profit > 0 && sellPrice > 0) {
+      profitEl.style.color = '#28a745';
+      adviceEl.innerText = `✅ 預估獲利！純利潤率約 ${((profit / sellPrice) * 100).toFixed(1)}%`;
+      adviceEl.style.color = '#28a745';
+    } else if (profit < 0) {
+      profitEl.style.color = '#dc3545';
+      adviceEl.innerText = `⚠ 當前價格將虧損 ${formatNumber(Math.abs(profit))} 楓幣！`;
+      adviceEl.style.color = '#dc3545';
+    } else {
+      profitEl.style.color = '#6c757d';
+      adviceEl.innerText = '➖ 打平成本';
+      adviceEl.style.color = '#6c757d';
+    }
+  }
+
+  // 經驗與打怪效率計算機子分頁邏輯
+  function renderExpTabs() {
+    const tabsList = document.getElementById('expTabsList');
+    if (!appData.expTabs || appData.expTabs.length === 0) {
+      appData.expTabs = [JSON.parse(JSON.stringify(defaultExpTab))];
+      appData.activeExpTabIdx = 0;
+    }
+
+    tabsList.innerHTML = appData.expTabs.map((tab, idx) => `
+      <button class="btn-sm ${idx === appData.activeExpTabIdx ? 'btn-primary' : 'btn-secondary'}" data-eidx="${idx}">
+        📄 ${tab.author || ('分頁 ' + (idx + 1))}
+      </button>
+    `).join('');
+
+    tabsList.querySelectorAll('button').forEach(btn => {
+      btn.onclick = function() {
+        appData.activeExpTabIdx = Number(this.getAttribute('data-eidx'));
+        saveDataToCloud();
+        loadActiveExpTabToUI();
+      };
+    });
+  }
+
+  function loadActiveExpTabToUI() {
+    renderExpTabs();
+    const tab = appData.expTabs[appData.activeExpTabIdx] || appData.expTabs[0];
+
+    document.getElementById('expSubTabAuthor').value = tab.author || "";
+    document.getElementById('expTestMinutes').value = tab.testMinutes !== undefined ? tab.testMinutes : 60;
+    document.getElementById('expStart').value = formatNumber(tab.expStart);
+    document.getElementById('expEnd').value = formatNumber(tab.expEnd);
+    document.getElementById('mesosStart').value = formatNumber(tab.mesosStart);
+    document.getElementById('mesosEnd').value = formatNumber(tab.mesosEnd);
+    document.getElementById('dropWeaponQty').value = formatNumber(tab.dropWeaponQty);
+
+    document.getElementById('hpPrice').value = formatNumber(tab.hpPrice);
+    document.getElementById('hpStart').value = formatNumber(tab.hpStart);
+    document.getElementById('hpEnd').value = formatNumber(tab.hpEnd);
+
+    document.getElementById('mpPrice').value = formatNumber(tab.mpPrice);
+    document.getElementById('mpStart').value = formatNumber(tab.mpStart);
+    document.getElementById('mpEnd').value = formatNumber(tab.mpEnd);
+
+    document.getElementById('cherryPrice').value = formatNumber(tab.cherryPrice);
+    document.getElementById('cherryStart').value = formatNumber(tab.cherryStart);
+    document.getElementById('cherryEnd').value = formatNumber(tab.cherryEnd);
+
+    renderDropItemsForActiveTab();
+    calculateExpEfficiency();
+    bindCommaInputs();
+  }
+
+  function renderDropItemsForActiveTab() {
+    const tab = appData.expTabs[appData.activeExpTabIdx];
+    if (!tab.dropItems) {
+      tab.dropItems = [
+        { name: "觸角", price: 303, qty: 0 },
+        { name: "尾巴", price: 310, qty: 0 }
+      ];
+    }
+    const container = document.getElementById('dropItemsContainer');
+    container.innerHTML = tab.dropItems.map((item, idx) => `
+      <div class="drop-item-row" data-didx="${idx}">
+        <input type="text" class="drop-name" value="${item.name}" placeholder="物品名稱" style="flex:2;">
+        <input type="text" class="drop-price comma-input" value="${formatNumber(item.price)}" placeholder="單價" style="flex:1;">
+        <span style="font-size:13px; font-weight:bold;">單價(楓幣)</span>
+        <input type="text" class="drop-qty comma-input" value="${formatNumber(item.qty)}" placeholder="數量" style="flex:1;">
+        <span style="font-size:13px; font-weight:bold;">個</span>
+        <button class="btn-sm btn-danger drop-del-btn" data-didx="${idx}">✕</button>
+      </div>
+    `).join('');
+
+    container.querySelectorAll('.drop-name, .drop-price, .drop-qty').forEach(input => {
+      input.oninput = function() {
+        const row = this.closest('.drop-item-row');
+        const dIdx = Number(row.getAttribute('data-didx'));
+        tab.dropItems[dIdx].name = row.querySelector('.drop-name').value;
+        tab.dropItems[dIdx].price = parseNumber(row.querySelector('.drop-price').value);
+        tab.dropItems[dIdx].qty = parseNumber(row.querySelector('.drop-qty').value);
+        saveDataToCloud();
+        calculateExpEfficiency();
+      };
+    });
+
+    container.querySelectorAll('.drop-del-btn').forEach(btn => {
+      btn.onclick = function() {
+        const dIdx = Number(this.getAttribute('data-didx'));
+        tab.dropItems.splice(dIdx, 1);
+        saveDataToCloud();
+        renderDropItemsForActiveTab();
+        calculateExpEfficiency();
+      };
+    });
+  }
+
+  function syncExpFormToData() {
+    const tab = appData.expTabs[appData.activeExpTabIdx];
+    if (!tab) return;
+
+    tab.author = document.getElementById('expSubTabAuthor').value;
+    tab.testMinutes = parseNumber(document.getElementById('expTestMinutes').value);
+    tab.expStart = parseNumber(document.getElementById('expStart').value);
+    tab.expEnd = parseNumber(document.getElementById('expEnd').value);
+    tab.mesosStart = parseNumber(document.getElementById('mesosStart').value);
+    tab.mesosEnd = parseNumber(document.getElementById('mesosEnd').value);
+    tab.dropWeaponQty = parseNumber(document.getElementById('dropWeaponQty').value);
+
+    tab.hpPrice = parseNumber(document.getElementById('hpPrice').value);
+    tab.hpStart = parseNumber(document.getElementById('hpStart').value);
+    tab.hpEnd = parseNumber(document.getElementById('hpEnd').value);
+
+    tab.mpPrice = parseNumber(document.getElementById('mpPrice').value);
+    tab.mpStart = parseNumber(document.getElementById('mpStart').value);
+    tab.mpEnd = parseNumber(document.getElementById('mpEnd').value);
+
+    tab.cherryPrice = parseNumber(document.getElementById('cherryPrice').value);
+    tab.cherryStart = parseNumber(document.getElementById('cherryStart').value);
+    tab.cherryEnd = parseNumber(document.getElementById('cherryEnd').value);
+
+    saveDataToCloud();
+    calculateExpEfficiency();
+  }
+
+  document.getElementById('btnAddExpTab').onclick = function() {
+    const authorName = prompt('請輸入此分頁的署名／記號：', '成員測試區');
+    if (authorName !== null) {
+      const newTab = JSON.parse(JSON.stringify(defaultExpTab));
+      newTab.author = authorName.trim() || '未署名';
+      appData.expTabs.push(newTab);
+      appData.activeExpTabIdx = appData.expTabs.length - 1;
+      saveDataToCloud();
+      loadActiveExpTabToUI();
+    }
+  };
+
+  document.getElementById('btnDelExpTab').onclick = function() {
+    if (appData.expTabs.length <= 1) {
+      alert('至少需保留一個分頁！');
+      return;
+    }
+    if (confirm('確定要刪除當前分頁嗎？')) {
+      appData.expTabs.splice(appData.activeExpTabIdx, 1);
+      appData.activeExpTabIdx = Math.max(0, appData.activeExpTabIdx - 1);
+      saveDataToCloud();
+      loadActiveExpTabToUI();
+    }
+  };
+
+  document.getElementById('btnClearExpNumbers').onclick = function() {
+    const tab = appData.expTabs[appData.activeExpTabIdx];
+    if (!tab) return;
+
+    if (confirm('確定要清空當前分頁的數字嗎？（尾巴、觸角及其數量與價錢會完整保留）')) {
+      tab.testMinutes = 60;
+      tab.expStart = 0;
+      tab.expEnd = 0;
+      tab.mesosStart = 0;
+      tab.mesosEnd = 0;
+      tab.dropWeaponQty = 0;
+      tab.hpPrice = 0;
+      tab.hpStart = 0;
+      tab.hpEnd = 0;
+      tab.mpPrice = 0;
+      tab.mpStart = 0;
+      tab.mpEnd = 0;
+      tab.cherryPrice = 0;
+      tab.cherryStart = 0;
+      tab.cherryEnd = 0;
+
+      // 嚴格保留掉落物中的尾巴與觸角，僅將其他非尾巴/觸角的數量歸零或過濾
+      if (tab.dropItems) {
+        tab.dropItems.forEach(item => {
+          if (item.name !== '尾巴' && item.name !== '觸角') {
+            item.qty = 0;
+          }
+        });
+      }
+
+      saveDataToCloud();
+      loadActiveExpTabToUI();
+      alert('已成功清空統計數字，尾巴與觸角資料已完整保留！');
+    }
+  };
+
+  document.getElementById('btnAddDropItem').onclick = function() {
+    const tab = appData.expTabs[appData.activeExpTabIdx];
+    if (!tab.dropItems) tab.dropItems = [];
+    tab.dropItems.push({ name: "新掉落物", price: 0, qty: 0 });
+    saveDataToCloud();
+    renderDropItemsForActiveTab();
+  };
+
+  function calculateExpEfficiency() {
+    const tab = appData.expTabs[appData.activeExpTabIdx];
+    if (!tab) return;
+
+    const durationMinutes = Number(tab.testMinutes) || 60;
+    const expStart = Number(tab.expStart) || 0;
+    const expEnd = Number(tab.expEnd) || 0;
+    const totalExp = Math.max(0, expEnd - expStart);
+
+    const mesosStart = Number(tab.mesosStart) || 0;
+    const mesosEnd = Number(tab.mesosEnd) || 0;
+    const baseMesos = Math.max(0, mesosEnd - mesosStart);
+
+    let dropMesos = 0;
+    if (tab.dropItems) {
+      tab.dropItems.forEach(item => {
+        dropMesos += (Number(item.price) || 0) * (Number(item.qty) || 0);
+      });
+    }
+
+    const weaponQty = Number(tab.dropWeaponQty) || 0;
+    const weaponMesos = weaponQty * 400000;
+
+    const hpCost = (Number(tab.hpPrice) || 0) * Math.max(0, (Number(tab.hpStart) || 0) - (Number(tab.hpEnd) || 0));
+    const mpCost = (Number(tab.mpPrice) || 0) * Math.max(0, (Number(tab.mpStart) || 0) - (Number(tab.mpEnd) || 0));
+    const cherryCost = (Number(tab.cherryPrice) || 0) * Math.max(0, (Number(tab.cherryStart) || 0) - (Number(tab.cherryEnd) || 0));
+
+    const totalCost = hpCost + mpCost + cherryCost;
+    const totalNetMesos = baseMesos + dropMesos + weaponMesos - totalCost;
+
+    const safeMinutes = durationMinutes > 0 ? durationMinutes : 60;
+    const expPerMin = totalExp / safeMinutes;
+    const mesosPerMin = totalNetMesos / safeMinutes;
+
+    const exp10m = Math.round(expPerMin * 10);
+    const mesos10m = Math.round(mesosPerMin * 10);
+    const exp1h = Math.round(expPerMin * 60);
+    const mesos1h = Math.round(mesosPerMin * 60);
+
+    document.getElementById('resTotalExp').innerText = formatNumber(totalExp);
+    document.getElementById('resTotalMesos').innerText = formatNumber(totalNetMesos) + ' 楓幣';
+    document.getElementById('resExp10m').innerText = formatNumber(exp10m);
+    document.getElementById('resMesos10m').innerText = formatNumber(mesos10m) + ' 楓幣';
+    document.getElementById('resExp1h').innerText = formatNumber(exp1h);
+    document.getElementById('resMesos1h').innerText = formatNumber(mesos1h) + ' 楓幣';
+  }
+
+  document.querySelectorAll('#tabContent-exp input').forEach(input => {
+    input.oninput = function() {
+      syncExpFormToData();
+    };
+  });
+
+  function renderProductManageList() {
+    syncRawMaterials();
+    const container = document.getElementById('productManageList');
+    if (appData.products.length === 0) {
+      container.innerHTML = '<div style="color:#888;">目前沒有任何成品資料。</div>';
+      return;
+    }
+
+    container.innerHTML = appData.products.map((p, idx) => `
+      <div class="product-manage-row">
+        <div class="product-manage-info">
+          <span class="product-manage-title">${p.name}</span>
+          <span class="product-manage-sub">${p.isOreRecipe ? '⛏️ 母礦煉製物' : '📋 組合裝備'} | 預設市場參考價: ${formatNumber(p.marketPrice || 0)} 楓幣</span>
+        </div>
+        <div class="product-manage-actions">
+          <button class="btn-sm btn-primary btn-edit-prod" data-idx="${idx}" title="編輯配方">✏️ 編輯</button>
+          <button class="btn-sm btn-danger btn-del-prod" data-idx="${idx}" title="刪除項目">🗑️ 刪除</button>
+        </div>
+      </div>
+    `).join('');
+
+    container.querySelectorAll('.btn-edit-prod').forEach(btn => {
+      btn.onclick = function() {
+        editingProductIndex = Number(this.getAttribute('data-idx'));
+        openEditModal(editingProductIndex);
+      };
+    });
+
+    container.querySelectorAll('.btn-del-prod').forEach(btn => {
+      btn.onclick = function() {
+        const idx = Number(this.getAttribute('data-idx'));
+        const pName = appData.products[idx].name;
+        if (confirm(`確定要刪除成品「${pName}」嗎？`)) {
+          appData.products.splice(idx, 1);
+          saveDataToCloud();
+          refreshUI();
+        }
+      };
+    });
+  }
+
+  function openEditModal(idx) {
+    const p = appData.products[idx];
+    syncRawMaterials();
+    const allMatKeys = Object.keys(appData.rawMaterials);
+    const allItemNames = allMatKeys.concat(appData.products.map(prod => prod.name));
+
+    const body = document.getElementById('modalEditBody');
+    body.innerHTML = `
+      <div style="margin-bottom:12px;">
+        <label style="font-weight:bold; font-size:13px;">成品名稱：</label>
+        <input type="text" id="modalName" value="${p.name}" style="margin-top:4px;">
+      </div>
+      <div style="margin-bottom:12px;">
+        <label style="font-weight:bold; font-size:13px;">預設市場參考價 (僅供管理參考)：</label>
+        <input type="text" id="modalMarketPrice" class="comma-input" value="${formatNumber(p.marketPrice || 0)}" style="margin-top:4px;">
+      </div>
+      <div style="margin-bottom:12px;">
+        <label style="cursor:pointer; font-weight:bold; color:#c55a11;">
+          <input type="checkbox" id="modalIsOre" ${p.isOreRecipe ? 'checked' : ''}> 母礦煉製物
+        </label>
+      </div>
+      <div id="modalRecipeContainer">
+        ${p.isOreRecipe ? `
+          <div style="background:#f1f3f5; padding:10px; border-radius:6px; font-size:13px;">
+            <div style="margin-bottom:8px;">母礦：
+              <select id="modalOreName" style="margin-top:4px;">
+                ${allMatKeys.map(mat => `<option value="${mat}" ${mat === p.oreName ? 'selected' : ''}>${mat}</option>`).join('')}
+              </select>
+            </div>
+            <div>手續費：
+              <input type="text" id="modalOreFee" class="comma-input" value="${formatNumber(p.craftFee || 300)}" style="margin-top:4px;">
+            </div>
+          </div>
+        ` : `
+          <div style="margin-bottom:10px;">
+            製作費：<input type="text" id="modalCraftFee" class="comma-input" value="${formatNumber(p.craftFee || 0)}" style="margin-top:4px;"> 楓幣
+          </div>
+          <div style="font-weight:bold; font-size:13px; margin-bottom:6px; color:#1f497d;">材料需求清單：</div>
+          <div id="modalIngredientsList">
+            ${(p.ingredients || []).map((ing, iIdx) => `
+              <div style="display:flex; gap:8px; margin-bottom:6px; align-items:center;" class="modal-ing-row" data-iidx="${iIdx}">
+                <select class="modal-ing-name" style="flex:1;">
+                  ${allItemNames.map(mat => `<option value="${mat}" ${mat === ing.name ? 'selected' : ''}>${mat}</option>`).join('')}
+                </select>
+                <input type="text" class="modal-ing-qty comma-input" value="${formatNumber(ing.qty)}" style="width:80px;">個
+                <button class="btn-sm btn-danger modal-del-ing">✕</button>
+              </div>
+            `).join('')}
+          </div>
+          <button class="btn-sm btn-secondary" id="modalAddIngBtn" style="margin-top:6px;">➕ 新增材料需求</button>
+        `}
+      </div>
+    `;
+
+    document.getElementById('modalIsOre').onchange = function() {
+      const isOre = this.checked;
+      const container = document.getElementById('modalRecipeContainer');
+      if (isOre) {
+        container.innerHTML = `
+          <div style="background:#f1f3f5; padding:10px; border-radius:6px; font-size:13px;">
+            <div style="margin-bottom:8px;">母礦：
+              <select id="modalOreName" style="margin-top:4px;">
+                ${allMatKeys.map(mat => `<option value="${mat}">${mat}</option>`).join('')}
+              </select>
+            </div>
+            <div>手續費：
+              <input type="text" id="modalOreFee" class="comma-input" value="300" style="margin-top:4px;">
+            </div>
+          </div>
+        `;
+      } else {
+        container.innerHTML = `
+          <div style="margin-bottom:10px;">
+            製作費：<input type="text" id="modalCraftFee" class="comma-input" value="0" style="margin-top:4px;"> 楓幣
+          </div>
+          <div style="font-weight:bold; font-size:13px; margin-bottom:6px; color:#1f497d;">材料需求清單：</div>
+          <div id="modalIngredientsList"></div>
+          <button class="btn-sm btn-secondary" id="modalAddIngBtn" style="margin-top:6px;">➕ 新增材料需求</button>
+        `;
+        document.getElementById('modalAddIngBtn').onclick = addModalIngRow;
+      }
+      bindCommaInputs();
+    };
+
+    if (!p.isOreRecipe) {
+      document.getElementById('modalAddIngBtn').onclick = addModalIngRow;
+      attachModalDelIngEvents();
+    }
+
+    bindCommaInputs();
+    document.getElementById('editModal').classList.add('active');
+  }
+
+  function addModalIngRow() {
+    syncRawMaterials();
+    const allMatKeys = Object.keys(appData.rawMaterials);
+    const allItemNames = allMatKeys.concat(appData.products.map(prod => prod.name));
+    const list = document.getElementById('modalIngredientsList');
+    const div = document.createElement('div');
+    div.style.cssText = "display:flex; gap:8px; margin-bottom:6px; align-items:center;";
+    div.className = "modal-ing-row";
+    div.innerHTML = `
+      <select class="modal-ing-name" style="flex:1;">
+        ${allItemNames.map(mat => `<option value="${mat}">${mat}</option>`).join('')}
+      </select>
+      <input type="text" class="modal-ing-qty comma-input" value="1" style="width:80px;">個
+      <button class="btn-sm btn-danger modal-del-ing">✕</button>
+    `;
+    list.appendChild(div);
+    div.querySelector('.modal-del-ing').onclick = function() { div.remove(); };
+    bindCommaInputs();
+  }
+
+  function attachModalDelIngEvents() {
+    document.querySelectorAll('.modal-del-ing').forEach(btn => {
+      btn.onclick = function() {
+        this.closest('.modal-ing-row').remove();
+      };
+    });
+  }
+
+  document.getElementById('btnCloseModal').onclick = function() {
+    document.getElementById('editModal').classList.remove('active');
+  };
+
+  document.getElementById('btnSaveModal').onclick = function() {
+    if (editingProductIndex === null) return;
+    const p = appData.products[editingProductIndex];
+    const newName = document.getElementById('modalName').value.trim();
+    if (!newName) { alert('名稱不能為空！'); return; }
+
+    p.name = newName;
+    p.marketPrice = parseNumber(document.getElementById('modalMarketPrice').value);
+    p.isOreRecipe = document.getElementById('modalIsOre').checked;
+
+    if (p.isOreRecipe) {
+      p.oreName = document.getElementById('modalOreName').value;
+      p.craftFee = parseNumber(document.getElementById('modalOreFee').value);
+      p.ingredients = [];
+    } else {
+      p.craftFee = parseNumber(document.getElementById('modalCraftFee').value);
+      p.ingredients = [];
+      document.querySelectorAll('.modal-ing-row').forEach(row => {
+        const ingName = row.querySelector('.modal-ing-name').value;
+        const ingQty = parseNumber(row.querySelector('.modal-ing-qty').value);
+        if (ingName && ingQty > 0) {
+          p.ingredients.push({ name: ingName, qty: ingQty });
+        }
+      });
+    }
+
+    saveDataToCloud();
+    refreshUI();
+    document.getElementById('editModal').classList.remove('active');
+  };
+
+  document.getElementById('btnConfirmAddProduct').onclick = function() {
+    const nameInput = document.getElementById('newProdNameInput');
+    const isOreCb = document.getElementById('newProdIsOreCb');
+    const name = nameInput.value.trim();
+    if (!name) { alert('請輸入成品名稱！'); return; }
+
+    if (appData.products.some(p => p.name === name)) {
+      alert('此成品名稱已存在！');
+      return;
+    }
+
+    syncRawMaterials();
+    const firstMat = Object.keys(appData.rawMaterials)[0] || "青銅母礦";
+
+    const newProd = isOreCb.checked ? {
+      name: name,
+      isOreRecipe: true,
+      oreName: firstMat,
+      craftFee: 300,
+      marketPrice: 50000,
+      ingredients: []
+    } : {
+      name: name,
+      isOreRecipe: false,
+      craftFee: 0,
+      marketPrice: 100000,
+      ingredients: []
+    };
+
+    appData.products.push(newProd);
+    nameInput.value = '';
+    isOreCb.checked = false;
+    saveDataToCloud();
+    refreshUI();
+    alert(`成功新增「${name}」！`);
+  };
+
+  function updateGalleryDisplay() {
+    const leftImg = document.getElementById('leftGalleryImg');
+    const rightImg = document.getElementById('rightGalleryImg');
+    const topImg = document.getElementById('topBannerImg');
+
+    if (appData.bgImages && appData.bgImages.length > 0) {
+      currentBgIndex = currentBgIndex % appData.bgImages.length;
+      leftImg.src = appData.bgImages[currentBgIndex];
+      rightImg.src = appData.bgImages[currentBgIndex];
+    } else {
+      leftImg.src = "";
+      rightImg.src = "";
+    }
+
+    if (appData.bannerImages && appData.bannerImages.length > 0) {
+      currentBannerIndex = currentBannerIndex % appData.bannerImages.length;
+      topImg.src = appData.bannerImages[currentBannerIndex];
+    } else {
+      topImg.src = "";
+    }
+
+    renderThumbnails();
+  }
+
+  function renderThumbnails() {
+    const bgThumbs = document.getElementById('bgThumbsContainer');
+    bgThumbs.innerHTML = (appData.bgImages || []).map((url, i) => `
+      <div class="bg-thumb-item ${i === currentBgIndex ? 'active' : ''}">
+        <img src="${url}" data-bidx="${i}" class="click-bg-thumb">
+        <button class="bg-thumb-del del-bg-btn" data-bidx="${i}">✕</button>
+      </div>
+    `).join('');
+
+    const bannerThumbs = document.getElementById('bannerThumbsContainer');
+    bannerThumbs.innerHTML = (appData.bannerImages || []).map((url, i) => `
+      <div class="bg-thumb-item ${i === currentBannerIndex ? 'active' : ''}">
+        <img src="${url}" data-banidx="${i}" class="click-banner-thumb">
+        <button class="bg-thumb-del del-banner-btn" data-banidx="${i}">✕</button>
+      </div>
+    `).join('');
+
+    document.querySelectorAll('.click-bg-thumb').forEach(img => {
+      img.onclick = function() { currentBgIndex = Number(this.getAttribute('data-bidx')); updateGalleryDisplay(); };
+    });
+    document.querySelectorAll('.del-bg-btn').forEach(btn => {
+      btn.onclick = function(e) {
+        e.stopPropagation();
+        const idx = Number(this.getAttribute('data-bidx'));
+        appData.bgImages.splice(idx, 1);
+        if (appData.bgImages.length === 0) appData.bgImages.push("https://images.unsplash.com/photo-1511447333015-45b65e60f6d5?auto=format&fit=crop&w=600&q=80");
+        saveDataToCloud();
+        updateGalleryDisplay();
+      };
+    });
+
+    document.querySelectorAll('.click-banner-thumb').forEach(img => {
+      img.onclick = function() { currentBannerIndex = Number(this.getAttribute('data-banidx')); updateGalleryDisplay(); };
+    });
+    document.querySelectorAll('.del-banner-btn').forEach(btn => {
+      btn.onclick = function(e) {
+        e.stopPropagation();
+        const idx = Number(this.getAttribute('data-banidx'));
+        appData.bannerImages.splice(idx, 1);
+        if (appData.bannerImages.length === 0) appData.bannerImages.push("https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=1200&q=80");
+        saveDataToCloud();
+        updateGalleryDisplay();
+      };
+    });
+
+    document.getElementById('slideshowToggle').checked = appData.slideshowActive;
+    document.getElementById('slideshowInterval').value = appData.slideshowTime || 10000;
+    setupSlideshowTimer();
+  }
+
+  document.getElementById('btnPrevBg').onclick = function() {
+    if (appData.bgImages && appData.bgImages.length > 0) {
+      currentBgIndex = (currentBgIndex - 1 + appData.bgImages.length) % appData.bgImages.length;
+      updateGalleryDisplay();
+    }
+  };
+  document.getElementById('btnNextBg').onclick = function() {
+    if (appData.bgImages && appData.bgImages.length > 0) {
+      currentBgIndex = (currentBgIndex + 1) % appData.bgImages.length;
+      updateGalleryDisplay();
+    }
+  };
+
+  document.getElementById('btnPrevBanner').onclick = function() {
+    if (appData.bannerImages && appData.bannerImages.length > 0) {
+      currentBannerIndex = (currentBannerIndex - 1 + appData.bannerImages.length) % appData.bannerImages.length;
+      updateGalleryDisplay();
+    }
+  };
+  document.getElementById('btnNextBanner').onclick = function() {
+    if (appData.bannerImages && appData.bannerImages.length > 0) {
+      currentBannerIndex = (currentBannerIndex + 1) % appData.bannerImages.length;
+      updateGalleryDisplay();
+    }
+  };
+
+  function setupSlideshowTimer() {
+    if (slideshowTimer) clearInterval(slideshowTimer);
+    if (appData.slideshowActive) {
+      const interval = Number(appData.slideshowTime) || 10000;
+      slideshowTimer = setInterval(() => {
+        if (appData.bgImages && appData.bgImages.length > 0) {
+          currentBgIndex = (currentBgIndex + 1) % appData.bgImages.length;
+        }
+        if (appData.bannerImages && appData.bannerImages.length > 0) {
+          currentBannerIndex = (currentBannerIndex + 1) % appData.bannerImages.length;
+        }
+        updateGalleryDisplay();
+      }, interval);
+    }
+  }
+
+  document.getElementById('slideshowToggle').onchange = function() {
+    appData.slideshowActive = this.checked;
+    saveDataToCloud();
+    setupSlideshowTimer();
+  };
+  document.getElementById('slideshowInterval').onchange = function() {
+    appData.slideshowTime = Number(this.value);
+    saveDataToCloud();
+    setupSlideshowTimer();
+  };
+
+  document.getElementById('bgFileInput').onchange = function(e) {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        if (!appData.bgImages) appData.bgImages = [];
+        appData.bgImages.push(event.target.result);
+        saveDataToCloud();
+        updateGalleryDisplay();
+        e.target.value = '';
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  document.getElementById('btnAddBgUrl').onclick = function() {
+    const url = document.getElementById('bgUrlInput').value.trim();
+    if (url) {
+      if (!appData.bgImages) appData.bgImages = [];
+      appData.bgImages.push(url);
+      saveDataToCloud();
+      updateGalleryDisplay();
+      document.getElementById('bgUrlInput').value = '';
+    }
+  };
+
+  document.getElementById('bannerFileInput').onchange = function(e) {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        if (!appData.bannerImages) appData.bannerImages = [];
+        appData.bannerImages.push(event.target.result);
+        saveDataToCloud();
+        updateGalleryDisplay();
+        e.target.value = '';
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  document.getElementById('btnAddBannerUrl').onclick = function() {
+    const url = document.getElementById('bannerUrlInput').value.trim();
+    if (url) {
+      if (!appData.bannerImages) appData.bannerImages = [];
+      appData.bannerImages.push(url);
+      saveDataToCloud();
+      updateGalleryDisplay();
+      document.getElementById('bannerUrlInput').value = '';
+    }
+  };
+
+  function refreshUI() {
+    renderMarketGrid();
+    renderProductDropdown();
+    onProductChange();
+    renderProductManageList();
+    loadActiveExpTabToUI();
+    updateGalleryDisplay();
+  }
+
+});
+</script>
+
 </body>
 </html>
