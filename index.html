@@ -1,10 +1,13 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-  <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAACXBIWXMAAA7DAAAOwwHHb6hkAAAAa0lEQVQ4jWNgGAWDCQA50pGZgYEBguv/Gf5vYPjPAPn/Q8g2fA0j6CgY5oGg/7Mh9H6Q5f///zNw+2+A8aHq/5//M3AwmKqgN4L/f7j+f0Kqg8F3D1X7/4dDjfM/A4ZfYXyNn1gUAKt3N/rQ0YfHAAAAAElFTkSuQmCC">  <meta charset="UTF-8">
+  <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>楓之谷 母礦連鎖自動成本計算機 v4.9.1 (雲端同步版)</title>
   
+  <!-- 自訂分頁圖示 -->
+  <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAACXBIWXMAAA7DAAAOwwHHb6hkAAAAa0lEQVQ4jWNgGAWDCQA50pGZgYEBguv/Gf5vYPjPAPn/Q8g2fA0j6CgY5oGg/7Mh9H6Q5f///zNw+2+A8aHq/5//M3AwmKqgN4L/f7j+f0Kqg8F3D1X7/4dDjfM/A4ZfYXyNn1gUAKt3N/rQ0YfHAAAAAElFTkSuQmCC">
+
   <!-- 引入 Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
@@ -245,7 +248,7 @@
 </head>
 <body>
 
-<div id="cloudSyncStatus">☁️ 雲端同步中...</div>
+<div id="cloudSyncStatus">☁️️ 雲端同步中...</div>
 
 <div class="side-gallery side-left">
   <img id="leftGalleryImg" src="" alt="左側直版相冊">
@@ -271,7 +274,6 @@
     </div>
   </h2>
 
-  <!-- 導覽列：管理成品在左、新增成品配方在右 -->
   <div class="tabs">
     <button class="tab-btn active" data-tab="tabContent-calc">🧮 快速選成品計算</button>
     <button class="tab-btn" data-tab="tabContent-manage">📜 管理成品</button>
@@ -279,7 +281,6 @@
     <button class="tab-btn" data-tab="tabContent-settings" id="btnTabSettings">⚙️ 設定</button>
   </div>
 
-  <!-- 分頁 1：快速計算 -->
   <div id="tabContent-calc" class="tab-content active">
     <div class="section-title">
       <span>1. 輸入基礎「母礦」或「打怪雜物」單價 (即時連動更新)</span>
@@ -308,7 +309,6 @@
     </div>
   </div>
 
-  <!-- 分頁 2：管理成品 (在左側) -->
   <div id="tabContent-manage" class="tab-content">
     <div class="section-title"><span>成品清單管理 (點擊編輯或刪除)</span></div>
     <div style="font-size:12px; color:#555; margin-bottom:12px;">
@@ -317,7 +317,6 @@
     <div id="productManageList"></div>
   </div>
 
-  <!-- 分頁 3：新增成品配方 (在右側) -->
   <div id="tabContent-add" class="tab-content">
     <div class="section-title"><span>➕ 建立新的合成配方或裝備</span></div>
     <div style="background: rgba(255,255,255,0.95); padding: 20px; border-radius: 12px; border: 1px solid #ddd;">
@@ -334,7 +333,6 @@
     </div>
   </div>
 
-  <!-- 分頁 4：設定 -->
   <div id="tabContent-settings" class="tab-content">
     <div class="section-title">🖼️ 1. 直版側邊相冊管理</div>
     <div class="bg-setting-panel">
@@ -386,7 +384,6 @@
   </div>
 </div>
 
-<!-- 編輯成品的彈出互動視窗 (Modal) -->
 <div class="modal-overlay" id="editModal">
   <div class="modal-card">
     <h3 style="margin-top:0; color:#c55a11; display:flex; justify-content:space-between; align-items:center;">
@@ -821,42 +818,40 @@ window.addEventListener('load', function() {
       } else {
         container.innerHTML = `
           <div style="margin-bottom:10px;">
-            製作費：<input type="number" id="modalCraftFee" value="50000" style="margin-top:4px;"> 楓幣
+            製作費：<input type="number" id="modalCraftFee" value="0" style="margin-top:4px;"> 楓幣
           </div>
           <div style="font-weight:bold; font-size:13px; margin-bottom:6px; color:#1f497d;">材料需求清單：</div>
           <div id="modalIngredientsList"></div>
           <button type="button" class="btn-sm btn-add" id="modalAddIngBtn" style="margin-top:6px;">➕ 新增材料需求</button>
         `;
-        bindModalAddIngEvent();
+        bindModalAddIngEvent(allItemNames);
       }
     };
 
     if (!p.isOreRecipe) {
-      bindModalAddIngEvent();
+      bindModalAddIngEvent(allItemNames);
     }
 
     document.getElementById('editModal').classList.add('active');
   }
 
-  function bindModalAddIngEvent() {
+  function bindModalAddIngEvent(allItemNames) {
     const addBtn = document.getElementById('modalAddIngBtn');
     if (addBtn) {
       addBtn.onclick = function() {
         const listContainer = document.getElementById('modalIngredientsList');
-        const allMatKeys = Object.keys(appData.rawMaterials);
-        const allItemNames = allMatKeys.concat(appData.products.map(prod => prod.name));
-        const div = document.createElement('div');
-        div.className = 'modal-ing-row';
-        div.style.cssText = 'display:flex; gap:8px; margin-bottom:6px; align-items:center;';
-        div.innerHTML = `
+        const row = document.createElement('div');
+        row.style.cssText = "display:flex; gap:8px; margin-bottom:6px; align-items:center;";
+        row.className = "modal-ing-row";
+        row.innerHTML = `
           <select class="modal-ing-name" style="flex:1;">
             ${allItemNames.map(mat => `<option value="${mat}">${mat}</option>`).join('')}
           </select>
           <input type="number" class="modal-ing-qty" value="1" style="width:80px;">個
           <button type="button" class="btn-sm btn-danger modal-del-ing">✕</button>
         `;
-        div.querySelector('.modal-del-ing').onclick = function() { div.remove(); };
-        listContainer.appendChild(div);
+        row.querySelector('.modal-del-ing').onclick = function() { row.remove(); };
+        listContainer.appendChild(row);
       };
     }
     document.querySelectorAll('.modal-del-ing').forEach(btn => {
@@ -870,9 +865,15 @@ window.addEventListener('load', function() {
 
   document.getElementById('btnSaveModal').onclick = function() {
     if (editingProductIndex === null || !appData.products[editingProductIndex]) return;
-    const p = appData.products[editingProductIndex];
 
-    p.name = document.getElementById('modalName').value.trim() || '未命名成品';
+    const p = appData.products[editingProductIndex];
+    const newName = document.getElementById('modalName').value.trim();
+    if (!newName) {
+      alert('名稱不能為空！');
+      return;
+    }
+
+    p.name = newName;
     p.marketPrice = Number(document.getElementById('modalMarketPrice').value) || 0;
     p.isOreRecipe = document.getElementById('modalIsOre').checked;
 
@@ -884,16 +885,16 @@ window.addEventListener('load', function() {
       p.craftFee = Number(document.getElementById('modalCraftFee').value) || 0;
       p.ingredients = [];
       document.querySelectorAll('.modal-ing-row').forEach(row => {
-        const name = row.querySelector('.modal-ing-name').value;
-        const qty = Number(row.querySelector('.modal-ing-qty').value) || 1;
-        p.ingredients.push({ name, qty });
+        const ingName = row.querySelector('.modal-ing-name').value;
+        const ingQty = Number(row.querySelector('.modal-ing-qty').value) || 1;
+        p.ingredients.push({ name: ingName, qty: ingQty });
       });
     }
 
+    document.getElementById('editModal').classList.remove('active');
     updateDependentProductPrices();
     saveDataToCloud();
     refreshUI();
-    document.getElementById('editModal').classList.remove('active');
   };
 
   document.getElementById('btnConfirmAddProduct').onclick = function() {
@@ -902,223 +903,221 @@ window.addEventListener('load', function() {
     const name = nameInput.value.trim();
 
     if (!name) {
-      alert('請輸入有效的成品名稱！');
+      alert('請輸入成品名稱！');
       return;
     }
 
-    appData.products.push({
-      name: name,
-      isOreRecipe: isOreCb.checked,
-      craftFee: isOreCb.checked ? 300 : 50000,
-      marketPrice: 0,
-      oreName: isOreCb.checked ? (Object.keys(appData.rawMaterials)[0] || '青銅母礦') : '',
-      ingredients: isOreCb.checked ? [] : [{ name: Object.keys(appData.rawMaterials)[0] || '青銅母礦', qty: 1 }]
-    });
+    if (appData.products.some(p => p.name === name)) {
+      alert('此成品名稱已存在！');
+      return;
+    }
 
-    updateDependentProductPrices();
-    saveDataToCloud();
-    refreshUI();
+    syncRawMaterials();
+    const firstOre = Object.keys(appData.rawMaterials)[0] || "青銅母礦";
+
+    if (isOreCb.checked) {
+      appData.products.push({
+        name: name,
+        isOreRecipe: true,
+        oreName: firstOre,
+        craftFee: 300,
+        marketPrice: 50000,
+        ingredients: []
+      });
+    } else {
+      appData.products.push({
+        name: name,
+        isOreRecipe: false,
+        craftFee: 1000,
+        marketPrice: 100000,
+        ingredients: []
+      });
+    }
 
     nameInput.value = '';
     isOreCb.checked = false;
-    alert(`成功新增成品「${name}」！`);
-    
-    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-    document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-    document.getElementById('tabContent-manage').classList.add('active');
-    document.querySelector('[data-tab="tabContent-manage"]').classList.add('active');
+    saveDataToCloud();
+    refreshUI();
+    document.querySelector('[data-tab="tabContent-manage"]').click();
   };
 
-  function applyGalleries() {
-    if (appData.bgImages.length > 0) {
-      if (currentBgIndex >= appData.bgImages.length) currentBgIndex = 0;
-      const url = appData.bgImages[currentBgIndex];
-      document.getElementById('leftGalleryImg').src = url;
-      document.getElementById('rightGalleryImg').src = url;
-    }
-    renderBgThumbs();
+  function updateGalleryImages() {
+    const leftImg = document.getElementById('leftGalleryImg');
+    const rightImg = document.getElementById('rightGalleryImg');
+    const bannerImg = document.getElementById('topBannerImg');
 
-    if (appData.bannerImages.length > 0) {
-      if (currentBannerIndex >= appData.bannerImages.length) currentBannerIndex = 0;
-      const bannerUrl = appData.bannerImages[currentBannerIndex];
-      document.getElementById('topBannerImg').src = bannerUrl;
+    if (appData.bgImages && appData.bgImages.length > 0) {
+      currentBgIndex = currentBgIndex % appData.bgImages.length;
+      leftImg.src = appData.bgImages[currentBgIndex];
+      rightImg.src = appData.bgImages[currentBgIndex];
+    } else {
+      leftImg.src = ''; rightImg.src = '';
     }
-    renderBannerThumbs();
+
+    if (appData.bannerImages && appData.bannerImages.length > 0) {
+      currentBannerIndex = currentBannerIndex % appData.bannerImages.length;
+      bannerImg.src = appData.bannerImages[currentBannerIndex];
+    } else {
+      bannerImg.src = '';
+    }
+
+    renderThumbnails();
   }
 
-  function nextBg() {
-    if (appData.bgImages.length > 0) {
-      currentBgIndex = (currentBgIndex + 1) % appData.bgImages.length;
-      applyGalleries();
-    }
+  function renderThumbnails() {
+    const bgContainer = document.getElementById('bgThumbsContainer');
+    bgContainer.innerHTML = (appData.bgImages || []).map((url, i) => `
+      <div class="bg-thumb-item ${i === currentBgIndex ? 'active' : ''}">
+        <img src="${url}" onclick="window.selectBg(${i})" title="點擊切換">
+        <button class="bg-thumb-del" onclick="window.delBg(${i})">✕</button>
+      </div>
+    `).join('');
+
+    const bannerContainer = document.getElementById('bannerThumbsContainer');
+    bannerContainer.innerHTML = (appData.bannerImages || []).map((url, i) => `
+      <div class="bg-thumb-item ${i === currentBannerIndex ? 'active' : ''}">
+        <img src="${url}" onclick="window.selectBanner(${i})" title="點擊切換">
+        <button class="bg-thumb-del" onclick="window.delBanner(${i})">✕</button>
+      </div>
+    `).join('');
   }
 
-  function prevBg() {
-    if (appData.bgImages.length > 0) {
+  window.selectBg = function(i) { currentBgIndex = i; updateGalleryImages(); };
+  window.delBg = function(i) {
+    appData.bgImages.splice(i, 1);
+    saveDataToCloud();
+    updateGalleryImages();
+  };
+
+  window.selectBanner = function(i) { currentBannerIndex = i; updateGalleryImages(); };
+  window.delBanner = function(i) {
+    appData.bannerImages.splice(i, 1);
+    saveDataToCloud();
+    updateGalleryImages();
+  };
+
+  document.getElementById('btnPrevBg').onclick = function() {
+    if (appData.bgImages && appData.bgImages.length > 0) {
       currentBgIndex = (currentBgIndex - 1 + appData.bgImages.length) % appData.bgImages.length;
-      applyGalleries();
+      updateGalleryImages();
     }
-  }
-
-  function nextBanner() {
-    if (appData.bannerImages.length > 0) {
-      currentBannerIndex = (currentBannerIndex + 1) % appData.bannerImages.length;
-      applyGalleries();
+  };
+  document.getElementById('btnNextBg').onclick = function() {
+    if (appData.bgImages && appData.bgImages.length > 0) {
+      currentBgIndex = (currentBgIndex + 1) % appData.bgImages.length;
+      updateGalleryImages();
     }
-  }
+  };
 
-  function prevBanner() {
-    if (appData.bannerImages.length > 0) {
+  document.getElementById('btnPrevBanner').onclick = function() {
+    if (appData.bannerImages && appData.bannerImages.length > 0) {
       currentBannerIndex = (currentBannerIndex - 1 + appData.bannerImages.length) % appData.bannerImages.length;
-      applyGalleries();
+      updateGalleryImages();
     }
-  }
-
-  function updateSlideshowTimer() {
-    if (slideshowTimer) clearInterval(slideshowTimer);
-    if (appData.slideshowActive) {
-      slideshowTimer = setInterval(() => {
-        nextBg();
-        nextBanner();
-      }, appData.slideshowTime);
+  };
+  document.getElementById('btnNextBanner').onclick = function() {
+    if (appData.bannerImages && appData.bannerImages.length > 0) {
+      currentBannerIndex = (currentBannerIndex + 1) % appData.bannerImages.length;
+      updateGalleryImages();
     }
-  }
-
-  document.getElementById('btnNextBg').onclick = nextBg;
-  document.getElementById('btnPrevBg').onclick = prevBg;
-  document.getElementById('btnNextBanner').onclick = nextBanner;
-  document.getElementById('btnPrevBanner').onclick = prevBanner;
-
-  const ssToggle = document.getElementById('slideshowToggle');
-  ssToggle.onchange = function() {
-    appData.slideshowActive = this.checked;
-    saveDataToCloud();
-    updateSlideshowTimer();
   };
-
-  const ssIntervalSelect = document.getElementById('slideshowInterval');
-  ssIntervalSelect.onchange = function() {
-    appData.slideshowTime = Number(this.value);
-    saveDataToCloud();
-    updateSlideshowTimer();
-  };
-
-  function renderBgThumbs() {
-    const container = document.getElementById('bgThumbsContainer');
-    container.innerHTML = appData.bgImages.map((img, idx) => `
-      <div class="bg-thumb-item ${idx === currentBgIndex ? 'active' : ''}" data-idx="${idx}">
-        <img src="${img}" alt="直版縮圖">
-        <button class="bg-thumb-del" data-idx="${idx}">✕</button>
-      </div>
-    `).join('');
-
-    container.querySelectorAll('.bg-thumb-item').forEach(el => {
-      el.onclick = function(e) {
-        if (e.target.tagName !== 'BUTTON') {
-          currentBgIndex = Number(this.getAttribute('data-idx'));
-          applyGalleries();
-        }
-      };
-    });
-
-    container.querySelectorAll('.bg-thumb-del').forEach(el => {
-      el.onclick = function(e) {
-        e.stopPropagation();
-        appData.bgImages.splice(Number(this.getAttribute('data-idx')), 1);
-        saveDataToCloud();
-        applyGalleries();
-      };
-    });
-  }
-
-  function renderBannerThumbs() {
-    const container = document.getElementById('bannerThumbsContainer');
-    container.innerHTML = appData.bannerImages.map((img, idx) => `
-      <div class="bg-thumb-item ${idx === currentBannerIndex ? 'active' : ''}" data-idx="${idx}">
-        <img src="${img}" alt="橫版縮圖">
-        <button class="bg-thumb-del" data-idx="${idx}">✕</button>
-      </div>
-    `).join('');
-
-    container.querySelectorAll('.bg-thumb-item').forEach(el => {
-      el.onclick = function(e) {
-        if (e.target.tagName !== 'BUTTON') {
-          currentBannerIndex = Number(this.getAttribute('data-idx'));
-          applyGalleries();
-        }
-      };
-    });
-
-    container.querySelectorAll('.bg-thumb-del').forEach(el => {
-      el.onclick = function(e) {
-        e.stopPropagation();
-        appData.bannerImages.splice(Number(this.getAttribute('data-idx')), 1);
-        saveDataToCloud();
-        applyGalleries();
-      };
-    });
-  }
 
   document.getElementById('btnAddBgUrl').onclick = function() {
-    const input = document.getElementById('bgUrlInput');
-    if (input.value.trim()) {
-      appData.bgImages.push(input.value.trim());
+    const url = document.getElementById('bgUrlInput').value.trim();
+    if (url) {
+      if (!appData.bgImages) appData.bgImages = [];
+      appData.bgImages.push(url);
+      document.getElementById('bgUrlInput').value = '';
       saveDataToCloud();
-      currentBgIndex = appData.bgImages.length - 1;
-      applyGalleries();
-      input.value = '';
+      updateGalleryImages();
     }
   };
 
   document.getElementById('btnAddBannerUrl').onclick = function() {
-    const input = document.getElementById('bannerUrlInput');
-    if (input.value.trim()) {
-      appData.bannerImages.push(input.value.trim());
+    const url = document.getElementById('bannerUrlInput').value.trim();
+    if (url) {
+      if (!appData.bannerImages) appData.bannerImages = [];
+      appData.bannerImages.push(url);
+      document.getElementById('bannerUrlInput').value = '';
       saveDataToCloud();
-      currentBannerIndex = appData.bannerImages.length - 1;
-      applyGalleries();
-      input.value = '';
+      updateGalleryImages();
     }
   };
 
   document.getElementById('bgFileInput').onchange = function(e) {
     const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = function(event) {
-      appData.bgImages.push(event.target.result);
-      saveDataToCloud();
-      currentBgIndex = appData.bgImages.length - 1;
-      applyGalleries();
-      e.target.value = '';
-    };
-    reader.readAsDataURL(file);
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        if (!appData.bgImages) appData.bgImages = [];
+        appData.bgImages.push(event.target.result);
+        saveDataToCloud();
+        updateGalleryImages();
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   document.getElementById('bannerFileInput').onchange = function(e) {
     const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = function(event) {
-      appData.bannerImages.push(event.target.result);
-      saveDataToCloud();
-      currentBannerIndex = appData.bannerImages.length - 1;
-      applyGalleries();
-      e.target.value = '';
-    };
-    reader.readAsDataURL(file);
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        if (!appData.bannerImages) appData.bannerImages = [];
+        appData.bannerImages.push(event.target.result);
+        saveDataToCloud();
+        updateGalleryImages();
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const toggleCb = document.getElementById('slideshowToggle');
+  const intervalSelect = document.getElementById('slideshowInterval');
+
+  function setupSlideshow() {
+    if (slideshowTimer) clearInterval(slideshowTimer);
+    if (appData.slideshowActive) {
+      const intervalTime = Number(appData.slideshowTime) || 10000;
+      slideshowTimer = setInterval(() => {
+        if (appData.bgImages && appData.bgImages.length > 0) {
+          currentBgIndex = (currentBgIndex + 1) % appData.bgImages.length;
+        }
+        if (appData.bannerImages && appData.bannerImages.length > 0) {
+          currentBannerIndex = (currentBannerIndex + 1) % appData.bannerImages.length;
+        }
+        updateGalleryImages();
+      }, intervalTime);
+    }
+  }
+
+  toggleCb.onchange = function() {
+    appData.slideshowActive = this.checked;
+    saveDataToCloud();
+    setupSlideshow();
+  };
+
+  intervalSelect.onchange = function() {
+    appData.slideshowTime = Number(this.value);
+    saveDataToCloud();
+    setupSlideshow();
   };
 
   function refreshUI() {
     renderMarketGrid();
     renderProductDropdown();
-    renderProductManageList();
     onProductChange();
-    applyGalleries();
-    ssToggle.checked = appData.slideshowActive;
-    ssIntervalSelect.value = appData.slideshowTime;
-    updateSlideshowTimer();
+    renderProductManageList();
+    updateGalleryImages();
+
+    toggleCb.checked = !!appData.slideshowActive;
+    if (appData.slideshowTime) {
+      intervalSelect.value = appData.slideshowTime;
+    }
+    setupSlideshow();
   }
+
+  refreshUI();
 });
 </script>
 
