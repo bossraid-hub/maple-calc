@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>楓之谷 母礦連鎖自動成本計算機 v4.7.2</title>
+  <title>楓之谷 母礦連鎖自動成本計算機 v4.7.3</title>
   <style>
     * { box-sizing: border-box; }
     body {
@@ -199,7 +199,7 @@
 
 <div class="container" id="mainContainer">
   <h2>
-    <span>🍁 楓之谷 母礦連鎖自動成本計算機 v4.7.2</span>
+    <span>🍁 楓之谷 母礦連鎖自動成本計算機 v4.7.3</span>
     <div style="display:flex; gap:8px;">
       <button class="btn-sm btn-secondary" id="btnPrevBg">◀ 側邊上一張</button>
       <button class="btn-sm btn-secondary" id="btnNextBg">側邊下一張 ▶</button>
@@ -219,20 +219,18 @@
     </div>
     <div class="price-market-grid" id="marketPriceGrid"></div>
 
-    <div class="section-title"><span>2. 選擇欲製作的成品 / 裝備 / 合成物</span></div>
+    <div class="section-title"><span>2. 選擇欲製作的成品 / 裝備 / 合成物與記錄市場價格</span></div>
     <div class="product-select-box">
       <label style="font-weight:bold; font-size:15px; color:#c55a11; display:block; margin-bottom:8px;">選擇項目：</label>
       <select id="productSelect" style="font-size:16px; padding:10px; font-weight:bold;"></select>
-      <div class="recipe-list-box" id="recipeDetailsBox"></div>
-    </div>
-
-    <div class="section-title">3. 售價與利潤分析</div>
-    <div style="display:flex; gap:15px; flex-wrap:wrap;">
-      <div style="flex:1; min-width:200px;">
-        <label style="font-size:13px; font-weight:bold;">🏷️ 我的預估售價 / 市場當前售價 (楓幣)</label>
-        <input type="number" id="sellPrice" placeholder="欲掛賣或市場參考價格" value="0">
-        <div style="font-size:11px; color:#666; margin-top:4px;">💡 切換成品時會自動代入你在配方中記錄的參考價，也可在此直接手動覆蓋修改。</div>
+      
+      <!-- 直接在此處顯示並可編輯當前市場最低價 -->
+      <div style="margin-top: 12px; display: flex; align-items: center; gap: 10px; background: rgba(255, 255, 255, 0.8); padding: 8px 12px; border-radius: 8px; border: 1px solid #ddd;">
+        <span style="font-weight: bold; font-size: 13px; color: #1f497d; white-space: nowrap;">🏷️ 當前市場最售價 / 最低價：</span>
+        <input type="number" id="inlineMarketPrice" placeholder="輸入市場參考價" style="font-weight: bold; color: #c55a11;">
       </div>
+
+      <div class="recipe-list-box" id="recipeDetailsBox"></div>
     </div>
 
     <div class="card-result">
@@ -350,32 +348,31 @@ window.addEventListener('load', function() {
   let slideshowTimer = null;
 
   try {
-    const savedRaws = localStorage.getItem('mp_raw_prices_v472');
+    const savedRaws = localStorage.getItem('mp_raw_prices_v473');
     if (savedRaws) rawMaterials = JSON.parse(savedRaws);
     else rawMaterials = { ...defaultRawMaterials };
 
-    const savedProds = localStorage.getItem('mp_products_v472');
+    const savedProds = localStorage.getItem('mp_products_v473');
     if (savedProds) products = JSON.parse(savedProds);
     else products = JSON.parse(JSON.stringify(defaultProducts));
 
-    // 相容舊版本沒有 marketPrice 欄位的情況
     products.forEach(p => {
       if (p.marketPrice === undefined) p.marketPrice = 0;
     });
 
-    const savedBgs = localStorage.getItem('mp_bg_list_v472');
+    const savedBgs = localStorage.getItem('mp_bg_list_v473');
     if (savedBgs) bgImages = JSON.parse(savedBgs);
 
-    const savedBanners = localStorage.getItem('mp_banner_list_v472');
+    const savedBanners = localStorage.getItem('mp_banner_list_v473');
     if (savedBanners) bannerImages = JSON.parse(savedBanners);
 
-    const savedSs = localStorage.getItem('mp_slideshow_active_v472');
+    const savedSs = localStorage.getItem('mp_slideshow_active_v473');
     if (savedSs !== null) slideshowActive = JSON.parse(savedSs);
 
-    const savedSsTime = localStorage.getItem('mp_slideshow_time_v472');
+    const savedSsTime = localStorage.getItem('mp_slideshow_time_v473');
     if (savedSsTime) slideshowTime = Number(savedSsTime);
 
-    const savedAuth = sessionStorage.getItem('mp_admin_auth_v472');
+    const savedAuth = sessionStorage.getItem('mp_admin_auth_v473');
     if (savedAuth === 'true') isAdminLoggedIn = true;
   } catch (e) {
     rawMaterials = { ...defaultRawMaterials };
@@ -400,12 +397,12 @@ window.addEventListener('load', function() {
 
   function saveData() {
     try {
-      localStorage.setItem('mp_raw_prices_v472', JSON.stringify(rawMaterials));
-      localStorage.setItem('mp_products_v472', JSON.stringify(products));
-      localStorage.setItem('mp_bg_list_v472', JSON.stringify(bgImages));
-      localStorage.setItem('mp_banner_list_v472', JSON.stringify(bannerImages));
-      localStorage.setItem('mp_slideshow_active_v472', JSON.stringify(slideshowActive));
-      localStorage.setItem('mp_slideshow_time_v472', slideshowTime);
+      localStorage.setItem('mp_raw_prices_v473', JSON.stringify(rawMaterials));
+      localStorage.setItem('mp_products_v473', JSON.stringify(products));
+      localStorage.setItem('mp_bg_list_v473', JSON.stringify(bgImages));
+      localStorage.setItem('mp_banner_list_v473', JSON.stringify(bannerImages));
+      localStorage.setItem('mp_slideshow_active_v473', JSON.stringify(slideshowActive));
+      localStorage.setItem('mp_slideshow_time_v473', slideshowTime);
     } catch(e) {}
   }
 
@@ -439,7 +436,7 @@ window.addEventListener('load', function() {
 
         if (inputUser === ADMIN_USER && inputPass === ADMIN_PASS) {
           isAdminLoggedIn = true;
-          sessionStorage.setItem('mp_admin_auth_v472', 'true');
+          sessionStorage.setItem('mp_admin_auth_v473', 'true');
           alert('管理員登入成功！');
         } else {
           alert('帳號或密碼錯誤，拒絕存取！');
@@ -456,7 +453,7 @@ window.addEventListener('load', function() {
 
   document.getElementById('btnLogoutAdmin').onclick = function() {
     isAdminLoggedIn = false;
-    sessionStorage.removeItem('mp_admin_auth_v472');
+    sessionStorage.removeItem('mp_admin_auth_v473');
     alert('已登出管理員！');
     document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
@@ -544,8 +541,8 @@ window.addEventListener('load', function() {
     const product = products[idx];
     const box = document.getElementById('recipeDetailsBox');
 
-    // 自動把儲存的市場參考價填入售價輸入框
-    document.getElementById('sellPrice').value = product.marketPrice || 0;
+    // 自動把儲存的市場參考價填入畫面上的輸入框
+    document.getElementById('inlineMarketPrice').value = product.marketPrice || 0;
 
     if (product.isOreRecipe) {
       const oreP = rawMaterials[product.oreName] || 0;
@@ -571,13 +568,15 @@ window.addEventListener('load', function() {
 
   document.getElementById('productSelect').onchange = onProductChange;
   
-  // 當手動更改售價時，同步更新目前成品的 marketPrice 並儲存
-  document.getElementById('sellPrice').oninput = function() {
+  // 當直接在選單下方修改「市場參考價/最低價」時，同步更新並儲存
+  document.getElementById('inlineMarketPrice').oninput = function() {
     const select = document.getElementById('productSelect');
     const idx = select.value;
     if (idx !== "" && products[idx]) {
       products[idx].marketPrice = Number(this.value) || 0;
       saveData();
+      // 如果管理頁面開著，也順便同步更新管理頁面的對應欄位
+      renderProductManagement();
     }
     calculate();
   };
@@ -598,7 +597,7 @@ window.addEventListener('load', function() {
       product.ingredients.forEach(ing => { totalCost += getItemUnitPrice(ing.name) * ing.qty; });
     }
 
-    const sellPrice = Number(document.getElementById('sellPrice').value) || 0;
+    const sellPrice = Number(document.getElementById('inlineMarketPrice').value) || 0;
     const netIncome = Math.floor(sellPrice * 0.97);
     const profit = netIncome - totalCost;
 
@@ -678,10 +677,18 @@ window.addEventListener('load', function() {
   document.getElementById('productRecipeManageList').onchange = function(e) {
     const card = e.target.closest('.recipe-card-edit');
     if (!card) return;
-    const p = products[Number(card.getAttribute('data-pidx'))];
+    const pIdx = Number(card.getAttribute('data-pidx'));
+    const p = products[pIdx];
     
     if (e.target.classList.contains('p-name-in')) p.name = e.target.value;
-    else if (e.target.classList.contains('p-marketprice-in')) p.marketPrice = Number(e.target.value) || 0;
+    else if (e.target.classList.contains('p-marketprice-in')) {
+      p.marketPrice = Number(e.target.value) || 0;
+      // 同步更新主畫面輸入框
+      if (document.getElementById('productSelect').value == pIdx) {
+        document.getElementById('inlineMarketPrice').value = p.marketPrice;
+        calculate();
+      }
+    }
     else if (e.target.classList.contains('p-orefee-in') || e.target.classList.contains('p-fee-in')) p.craftFee = Number(e.target.value) || 0;
     else if (e.target.classList.contains('p-ing-qty-in')) {
       const iIdx = Number(e.target.closest('[data-iidx]').getAttribute('data-iidx'));
