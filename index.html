@@ -101,26 +101,6 @@
       object-fit: cover;
       transition: opacity 0.6s ease-in-out;
     }
-    .top-banner-controls {
-      position: absolute;
-      bottom: 10px;
-      right: 15px;
-      display: flex;
-      gap: 6px;
-      background: rgba(0,0,0,0.5);
-      padding: 4px 8px;
-      border-radius: 20px;
-      backdrop-filter: blur(4px);
-    }
-    .top-banner-controls button {
-      background: none;
-      border: none;
-      color: white;
-      font-size: 12px;
-      cursor: pointer;
-      font-weight: bold;
-      padding: 2px 6px;
-    }
 
     .container {
       position: relative;
@@ -285,19 +265,11 @@
 
 <div class="top-banner-gallery">
   <img id="topBannerImg" src="" alt="頂部橫版相冊">
-  <div class="top-banner-controls">
-    <button id="btnPrevBanner">◀ 上一張</button>
-    <button id="btnNextBanner">下一張 ▶</button>
-  </div>
 </div>
 
 <div class="container" id="mainContainer">
   <h2>
     <span>🍁 楓之谷成本計算機</span>
-    <div style="display:flex; gap:8px;">
-      <button class="btn-sm btn-secondary" id="btnPrevBg">◀ 側邊上一張</button>
-      <button class="btn-sm btn-secondary" id="btnNextBg">側邊下一張 ▶</button>
-    </div>
   </h2>
 
   <div class="tabs">
@@ -348,7 +320,7 @@
     <div id="expTabsList" style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:15px; background:rgba(0,0,0,0.04); padding:10px; border-radius:8px;"></div>
 
     <div style="background:rgba(255,255,255,0.95); padding:15px; border-radius:10px; margin-bottom:15px; border:1px solid #ddd; display:flex; gap:10px; align-items:center;">
-      <label style="font-weight:bold; font-size:13px; white-space:nowrap;">✏️ 本分頁署名／記號：</label>
+      <label style="font-weight:bold; font-size:13px; white-space:nowrap;">✏️️ 本分頁署名／記號：</label>
       <input type="text" id="expSubTabAuthor" placeholder="例如：小明的測試區" style="flex:1; font-weight:bold; color:#1f497d;">
       <button class="btn-sm btn-primary" id="btnClearExpNumbers" style="background:#f0ad4e;">🧹 清空數字（保留尾巴與觸角）</button>
     </div>
@@ -604,7 +576,6 @@ window.addEventListener('load', function() {
 
   let appData = JSON.parse(JSON.stringify(defaultData));
   
-  // 經驗與打怪效率計算機改為從本地 localStorage 讀取，實現完全獨立運算
   let localExpData = JSON.parse(localStorage.getItem('maple_local_exp_v1')) || {
     expTabs: [JSON.parse(JSON.stringify(defaultExpTab))],
     activeExpTabIdx: 0
@@ -625,7 +596,6 @@ window.addEventListener('load', function() {
     }
   });
 
-  // 雲端監聽（僅同步母礦、成品配方與相冊設定，經驗計算機留給本地）
   dbRef.on('value', (snapshot) => {
     const val = snapshot.val();
     if (val) {
@@ -661,7 +631,6 @@ window.addEventListener('load', function() {
     });
   }
 
-  // 儲存經驗計算機資料至本地端
   function saveExpDataLocally() {
     localStorage.setItem('maple_local_exp_v1', JSON.stringify(localExpData));
   }
@@ -909,7 +878,6 @@ window.addEventListener('load', function() {
     }
   }
 
-  // 本地經驗計算機子分頁邏輯
   function renderExpTabs() {
     const tabsList = document.getElementById('expTabsList');
     if (!localExpData.expTabs || localExpData.expTabs.length === 0) {
@@ -1460,32 +1428,6 @@ window.addEventListener('load', function() {
     document.getElementById('slideshowInterval').value = appData.slideshowTime || 10000;
     setupSlideshowTimer();
   }
-
-  document.getElementById('btnPrevBg').onclick = function() {
-    if (appData.bgImages && appData.bgImages.length > 0) {
-      currentBgIndex = (currentBgIndex - 1 + appData.bgImages.length) % appData.bgImages.length;
-      updateGalleryDisplay();
-    }
-  };
-  document.getElementById('btnNextBg').onclick = function() {
-    if (appData.bgImages && appData.bgImages.length > 0) {
-      currentBgIndex = (currentBgIndex + 1) % appData.bgImages.length;
-      updateGalleryDisplay();
-    }
-  };
-
-  document.getElementById('btnPrevBanner').onclick = function() {
-    if (appData.bannerImages && appData.bannerImages.length > 0) {
-      currentBannerIndex = (currentBannerIndex - 1 + appData.bannerImages.length) % appData.bannerImages.length;
-      updateGalleryDisplay();
-    }
-  };
-  document.getElementById('btnNextBanner').onclick = function() {
-    if (appData.bannerImages && appData.bannerImages.length > 0) {
-      currentBannerIndex = (currentBannerIndex + 1) % appData.bannerImages.length;
-      updateGalleryDisplay();
-    }
-  };
 
   function setupSlideshowTimer() {
     if (slideshowTimer) clearInterval(slideshowTimer);
