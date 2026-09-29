@@ -288,14 +288,14 @@
     </div>
     <div class="price-market-grid" id="marketPriceGrid"></div>
 
-    <div class="section-title"><span>2. 選擇欲製作的成品 / 裝備 / 合成物與記錄市場價格</span></div>
+    <div class="section-title"><span>2. 選擇欲製作的成品 / 裝備 / 合成物與測試市場價格</span></div>
     <div class="product-select-box">
       <label style="font-weight:bold; font-size:15px; color:#c55a11; display:block; margin-bottom:8px;">選擇項目：</label>
       <select id="productSelect" style="font-size:16px; padding:10px; font-weight:bold;"></select>
       
       <div style="margin-top: 12px; display: flex; align-items: center; gap: 10px; background: rgba(255, 255, 255, 0.8); padding: 8px 12px; border-radius: 8px; border: 1px solid #ddd;">
         <span style="font-weight: bold; font-size: 13px; color: #1f497d; white-space: nowrap;">🏷️ 當前市場售價 / 最低價：</span>
-        <input type="number" id="inlineMarketPrice" placeholder="請手動輸入拍賣市場售價" style="font-weight: bold; color: #c55a11;">
+        <input type="number" id="inlineMarketPrice" placeholder="請手動輸入要測試的拍賣售價" style="font-weight: bold; color: #c55a11;">
       </div>
 
       <div class="recipe-list-box" id="recipeDetailsBox"></div>
@@ -615,7 +615,7 @@ window.addEventListener('load', function() {
     const product = appData.products[idx];
     const box = document.getElementById('recipeDetailsBox');
 
-    // 讀取該成品獨立儲存的市場價格（不會被成本價覆蓋）
+    // 切換下拉選單時，將該成品的預設市場價格帶入計算頁的輸入框（僅作為初始預設，修改時不會存回成品資料）
     document.getElementById('inlineMarketPrice').value = (product.marketPrice !== undefined) ? product.marketPrice : '';
 
     if (product.isOreRecipe) {
@@ -642,14 +642,8 @@ window.addEventListener('load', function() {
 
   document.getElementById('productSelect').onchange = onProductChange;
   
+  // 這裡只負責即時計算，絕對不修改 appData 裡的成品價格（不會連動到管理成品）
   document.getElementById('inlineMarketPrice').oninput = function() {
-    const select = document.getElementById('productSelect');
-    const idx = select.value;
-    if (idx !== "" && appData.products[idx]) {
-      appData.products[idx].marketPrice = Number(this.value) || 0;
-      saveDataToCloud();
-      renderProductManageList();
-    }
     calculate();
   };
 
@@ -706,7 +700,7 @@ window.addEventListener('load', function() {
       <div class="product-manage-row">
         <div class="product-manage-info">
           <span class="product-manage-title">${p.name}</span>
-          <span class="product-manage-sub">${p.isOreRecipe ? '⛏️ 母礦煉製物' : '📋 組合裝備'} | 市場參考價: ${(p.marketPrice || 0).toLocaleString()} 楓幣</span>
+          <span class="product-manage-sub">${p.isOreRecipe ? '⛏️ 母礦煉製物' : '📋 組合裝備'} | 預設市場參考價: ${(p.marketPrice || 0).toLocaleString()} 楓幣</span>
         </div>
         <div class="product-manage-actions">
           <button class="btn-sm btn-primary btn-edit-prod" data-idx="${idx}" title="編輯配方">✏️ 編輯</button>
@@ -748,7 +742,7 @@ window.addEventListener('load', function() {
         <input type="text" id="modalName" value="${p.name}" style="margin-top:4px;">
       </div>
       <div style="margin-bottom:12px;">
-        <label style="font-weight:bold; font-size:13px;">市場參考價：</label>
+        <label style="font-weight:bold; font-size:13px;">預設市場參考價 (僅供管理參考)：</label>
         <input type="number" id="modalMarketPrice" value="${p.marketPrice || 0}" style="margin-top:4px;">
       </div>
       <div style="margin-bottom:12px;">
