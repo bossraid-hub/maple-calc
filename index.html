@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>楓之谷 母礦連鎖自動成本計算機 v4.9.2 (雲端同步版)</title>
+  <title>楓之谷 母礦連鎖自動成本計算機 v4.9.3 (雲端同步版)</title>
   
-  <!-- 自訂分頁圖示 -->
-  <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAACXBIWXMAAA7DAAAOwwHHb6hkAAAAa0lEQVQ4jWNgGAWDCQA50pGZgYEBguv/Gf5vYPjPAPn/Q8g2fA0j6CgY5oGg/7Mh9H6Q5f///zNw+2+A8aHq/5//M3AwmKqgN4L/f7j+f0Kqg8F3D1X7/4dDjfM/A4ZfYXyNn1gUAKt3N/rQ0YfHAAAAAElFTkSuQmCC">
+  <!-- 自訂分頁圖示 (使用穩定圖示源) -->
+  <link rel="icon" type="image/png" href="https://icons.iconarchive.com/icons/raindropmemory/legend-of-mushroom/128/Maple-icon.png">
 
   <!-- 引入 Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -267,7 +267,7 @@
 
 <div class="container" id="mainContainer">
   <h2>
-    <span>🍁 楓之谷 母礦連鎖自動成本計算機 v4.9.2</span>
+    <span>🍁 楓之谷 母礦連鎖自動成本計算機 v4.9.3</span>
     <div style="display:flex; gap:8px;">
       <button class="btn-sm btn-secondary" id="btnPrevBg">◀ 側邊上一張</button>
       <button class="btn-sm btn-secondary" id="btnNextBg">側邊下一張 ▶</button>
@@ -295,7 +295,7 @@
       
       <div style="margin-top: 12px; display: flex; align-items: center; gap: 10px; background: rgba(255, 255, 255, 0.8); padding: 8px 12px; border-radius: 8px; border: 1px solid #ddd;">
         <span style="font-weight: bold; font-size: 13px; color: #1f497d; white-space: nowrap;">🏷️ 當前市場售價 / 最低價：</span>
-        <input type="number" id="inlineMarketPrice" placeholder="請手動輸入要測試的拍賣售價" style="font-weight: bold; color: #c55a11;">
+        <input type="text" id="inlineMarketPrice" class="comma-input" placeholder="請手動輸入要測試的拍賣售價" style="font-weight: bold; color: #c55a11;">
       </div>
 
       <div class="recipe-list-box" id="recipeDetailsBox"></div>
@@ -411,7 +411,7 @@ const firebaseConfig = {
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
-const dbRef = db.ref('maple_calculator_v490');
+const dbRef = db.ref('maple_calculator_v493');
 
 window.addEventListener('load', function() {
 
@@ -426,6 +426,10 @@ window.addEventListener('load', function() {
     products: [
       { name: "青銅", isOreRecipe: true, oreName: "青銅母礦", craftFee: 300, marketPrice: 48000, ingredients: [] },
       { name: "鋼鐵", isOreRecipe: true, oreName: "鋼鐵母礦", craftFee: 300, marketPrice: 53000, ingredients: [] },
+      {
+        name: "合成木材", isOreRecipe: false, craftFee: 0, marketPrice: 10000,
+        ingredients: [{ name: "木柴", qty: 5 }]
+      },
       {
         name: "青銅長劍", isOreRecipe: false, craftFee: 50000, marketPrice: 200000,
         ingredients: [{ name: "青銅", qty: 3 }, { name: "木柴", qty: 10 }]
@@ -488,6 +492,35 @@ window.addEventListener('load', function() {
     });
   }
 
+  // 千分位格式化工具函數
+  function formatNumber(num) {
+    if (num === '' || num === null || isNaN(num)) return '';
+    return Number(num).toLocaleString('en-US');
+  }
+
+  function parseNumber(str) {
+    if (!str) return 0;
+    return Number(String(str).replace(/,/g, '')) || 0;
+  }
+
+  // 為所有 class="comma-input" 的輸入框綁聯動與千分位格式
+  function bindCommaInputs() {
+    document.querySelectorAll('.comma-input').forEach(input => {
+      // 避免重複綁定
+      if (input.dataset.commaBound) return;
+      input.dataset.commaBound = "true";
+
+      input.addEventListener('focus', function() {
+        this.value = parseNumber(this.value) === 0 ? '' : parseNumber(this.value);
+      });
+
+      input.addEventListener('blur', function() {
+        const val = parseNumber(this.value);
+        this.value = formatNumber(val);
+      });
+    });
+  }
+
   function syncRawMaterials() {
     appData.products.forEach(p => {
       if (p.isOreRecipe && p.oreName && !(p.oreName in appData.rawMaterials)) {
@@ -524,7 +557,6 @@ window.addEventListener('load', function() {
   document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.onclick = function() {
       const targetId = this.getAttribute('data-tab');
-
       document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
       document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
       document.getElementById(targetId).classList.add('active');
@@ -552,7 +584,7 @@ window.addEventListener('load', function() {
         <div class="price-item" data-mat="${mat}">
           ${!isUsed ? `<button class="mat-del-btn" title="刪除此雜物">✕</button>` : ''}
           <label>${mat} (單價)</label>
-          <input type="number" class="mat-price-input" data-mat="${mat}" value="${appData.rawMaterials[mat]}">
+          <input type="text" class="mat-price-input comma-input" data-mat="${mat}" value="${formatNumber(appData.rawMaterials[mat])}">
           <div class="price-subtext">打怪掉落 / 基礎材料</div>
         </div>
       `;
@@ -560,7 +592,8 @@ window.addEventListener('load', function() {
 
     document.querySelectorAll('.mat-price-input').forEach(input => {
       input.oninput = function() {
-        appData.rawMaterials[this.getAttribute('data-mat')] = Number(this.value) || 0;
+        const rawVal = parseNumber(this.value);
+        appData.rawMaterials[this.getAttribute('data-mat')] = rawVal;
         saveDataToCloud();
         onProductChange();
         renderProductManageList();
@@ -577,6 +610,8 @@ window.addEventListener('load', function() {
         }
       };
     });
+
+    bindCommaInputs();
   }
 
   document.getElementById('btnAddRawMat').onclick = function() {
@@ -615,35 +650,43 @@ window.addEventListener('load', function() {
     const product = appData.products[idx];
     const box = document.getElementById('recipeDetailsBox');
 
-    // 切換下拉選單時，將該成品的預設市場價格帶入計算頁的輸入框（僅作為初始預設，修改時不會存回成品資料）
-    document.getElementById('inlineMarketPrice').value = (product.marketPrice !== undefined) ? product.marketPrice : '';
+    // 帶入初始預設售價
+    const marketInput = document.getElementById('inlineMarketPrice');
+    if (!marketInput.dataset.userEdited || marketInput.dataset.currentProd !== product.name) {
+      marketInput.value = formatNumber(product.marketPrice || 0);
+      marketInput.dataset.currentProd = product.name;
+      marketInput.dataset.userEdited = "";
+    }
 
     if (product.isOreRecipe) {
       const oreP = appData.rawMaterials[product.oreName] || 0;
       const unitCost = (oreP * 10) + (product.craftFee || 300);
       box.innerHTML = `
         <div style="font-weight:bold; color:#1f497d; margin-bottom:4px;">⛏️ 母礦煉製公式：</div>
-        <div class="recipe-item"><span>• 10 個 ${product.oreName}</span><span>${(oreP * 10).toLocaleString()} 楓幣</span></div>
-        <div class="recipe-item" style="color:#c55a11; font-weight:bold;"><span>• 合成手續費</span><span>${(product.craftFee || 300).toLocaleString()} 楓幣</span></div>
-        <div style="margin-top:6px; font-weight:bold; color:#2e75b6; text-align:right;">總成本 = ${unitCost.toLocaleString()} 楓幣</div>
+        <div class="recipe-item"><span>• 10 個 ${product.oreName}</span><span>${formatNumber(oreP * 10)} 楓幣</span></div>
+        <div class="recipe-item" style="color:#c55a11; font-weight:bold;"><span>• 合成手續費</span><span>${formatNumber(product.craftFee || 300)} 楓幣</span></div>
+        <div style="margin-top:6px; font-weight:bold; color:#2e75b6; text-align:right;">總成本 = ${formatNumber(unitCost)} 楓幣</div>
       `;
     } else {
       box.innerHTML = `
         <div style="font-weight:bold; margin-bottom:6px; color:#1f497d;">📋 裝備組裝配方需求：</div>
         ${(product.ingredients || []).map(ing => {
           const unitPrice = getItemUnitPrice(ing.name);
-          return `<div class="recipe-item"><span>• ${ing.name} x${ing.qty} 個</span><span>單價: ${unitPrice.toLocaleString()} (小計: ${(unitPrice * ing.qty).toLocaleString()})</span></div>`;
+          return `<div class="recipe-item"><span>• ${ing.name} x${ing.qty} 個</span><span>單價: ${formatNumber(unitPrice)} (小計: ${formatNumber(unitPrice * ing.qty)})</span></div>`;
         }).join('')}
-        <div class="recipe-item" style="color:#c55a11; font-weight:bold;"><span>• NPC 製作費</span><span>${(product.craftFee||0).toLocaleString()} 楓幣</span></div>
+        <div class="recipe-item" style="color:#c55a11; font-weight:bold;"><span>• NPC 製作費</span><span>${formatNumber(product.craftFee || 0)} 楓幣</span></div>
       `;
     }
     calculate();
   }
 
-  document.getElementById('productSelect').onchange = onProductChange;
+  document.getElementById('productSelect').onchange = function() {
+    document.getElementById('inlineMarketPrice').dataset.userEdited = "";
+    onProductChange();
+  };
   
-  // 這裡只負責即時計算，絕對不修改 appData 裡的成品價格（不會連動到管理成品）
   document.getElementById('inlineMarketPrice').oninput = function() {
+    this.dataset.userEdited = "true";
     calculate();
   };
 
@@ -658,28 +701,32 @@ window.addEventListener('load', function() {
     }
 
     const product = appData.products[idx];
+    
+    // 完整計算總成本（包含組合裝備的材料清單加總與製作費）
     let totalCost = product.isOreRecipe ? ((appData.rawMaterials[product.oreName] || 0) * 10) + (product.craftFee || 300) : (product.craftFee || 0);
     if (!product.isOreRecipe && product.ingredients) {
-      product.ingredients.forEach(ing => { totalCost += getItemUnitPrice(ing.name) * ing.qty; });
+      product.ingredients.forEach(ing => { 
+        totalCost += getItemUnitPrice(ing.name) * ing.qty; 
+      });
     }
 
-    const sellPrice = Number(document.getElementById('inlineMarketPrice').value) || 0;
+    const sellPrice = parseNumber(document.getElementById('inlineMarketPrice').value);
     const netIncome = Math.floor(sellPrice * 0.97);
     const profit = netIncome - totalCost;
 
-    document.getElementById('totalCost').innerText = totalCost.toLocaleString() + ' 楓幣';
-    document.getElementById('netIncome').innerText = netIncome.toLocaleString() + ' 楓幣';
-    document.getElementById('profit').innerText = profit.toLocaleString() + ' 楓幣';
+    document.getElementById('totalCost').innerText = formatNumber(totalCost) + ' 楓幣';
+    document.getElementById('netIncome').innerText = formatNumber(netIncome) + ' 楓幣';
+    document.getElementById('profit').innerText = formatNumber(profit) + ' 楓幣';
 
     const profitEl = document.getElementById('profit');
     const adviceEl = document.getElementById('profitAdvice');
-    if (profit > 0) {
+    if (profit > 0 && sellPrice > 0) {
       profitEl.style.color = '#28a745';
       adviceEl.innerText = `✅ 預估獲利！純利潤率約 ${((profit / sellPrice) * 100).toFixed(1)}%`;
       adviceEl.style.color = '#28a745';
     } else if (profit < 0) {
       profitEl.style.color = '#dc3545';
-      adviceEl.innerText = `⚠️ 當前價格將虧損 ${Math.abs(profit).toLocaleString()} 楓幣！`;
+      adviceEl.innerText = `⚠️ 當前價格將虧損 ${formatNumber(Math.abs(profit))} 楓幣！`;
       adviceEl.style.color = '#dc3545';
     } else {
       profitEl.style.color = '#6c757d';
@@ -700,7 +747,7 @@ window.addEventListener('load', function() {
       <div class="product-manage-row">
         <div class="product-manage-info">
           <span class="product-manage-title">${p.name}</span>
-          <span class="product-manage-sub">${p.isOreRecipe ? '⛏️ 母礦煉製物' : '📋 組合裝備'} | 預設市場參考價: ${(p.marketPrice || 0).toLocaleString()} 楓幣</span>
+          <span class="product-manage-sub">${p.isOreRecipe ? '⛏️ 母礦煉製物' : '📋 組合裝備'} | 預設市場參考價: ${formatNumber(p.marketPrice || 0)} 楓幣</span>
         </div>
         <div class="product-manage-actions">
           <button class="btn-sm btn-primary btn-edit-prod" data-idx="${idx}" title="編輯配方">✏️ 編輯</button>
@@ -743,7 +790,7 @@ window.addEventListener('load', function() {
       </div>
       <div style="margin-bottom:12px;">
         <label style="font-weight:bold; font-size:13px;">預設市場參考價 (僅供管理參考)：</label>
-        <input type="number" id="modalMarketPrice" value="${p.marketPrice || 0}" style="margin-top:4px;">
+        <input type="text" id="modalMarketPrice" class="comma-input" value="${formatNumber(p.marketPrice || 0)}" style="margin-top:4px;">
       </div>
       <div style="margin-bottom:12px;">
         <label style="cursor:pointer; font-weight:bold; color:#c55a11;">
@@ -759,12 +806,12 @@ window.addEventListener('load', function() {
               </select>
             </div>
             <div>手續費：
-              <input type="number" id="modalOreFee" value="${p.craftFee || 300}" style="margin-top:4px;">
+              <input type="text" id="modalOreFee" class="comma-input" value="${formatNumber(p.craftFee || 300)}" style="margin-top:4px;">
             </div>
           </div>
         ` : `
           <div style="margin-bottom:10px;">
-            製作費：<input type="number" id="modalCraftFee" value="${p.craftFee || 0}" style="margin-top:4px;"> 楓幣
+            製作費：<input type="text" id="modalCraftFee" class="comma-input" value="${formatNumber(p.craftFee || 0)}" style="margin-top:4px;"> 楓幣
           </div>
           <div style="font-weight:bold; font-size:13px; margin-bottom:6px; color:#1f497d;">材料需求清單：</div>
           <div id="modalIngredientsList">
@@ -773,7 +820,7 @@ window.addEventListener('load', function() {
                 <select class="modal-ing-name" style="flex:1;">
                   ${allItemNames.map(mat => `<option value="${mat}" ${mat === ing.name ? 'selected' : ''}>${mat}</option>`).join('')}
                 </select>
-                <input type="number" class="modal-ing-qty" value="${ing.qty}" style="width:80px;">個
+                <input type="text" class="modal-ing-qty comma-input" value="${formatNumber(ing.qty)}" style="width:80px;">個
                 <button type="button" class="btn-sm btn-danger modal-del-ing">✕</button>
               </div>
             `).join('')}
@@ -795,14 +842,14 @@ window.addEventListener('load', function() {
               </select>
             </div>
             <div>手續費：
-              <input type="number" id="modalOreFee" value="300" style="margin-top:4px;">
+              <input type="text" id="modalOreFee" class="comma-input" value="300" style="margin-top:4px;">
             </div>
           </div>
         `;
       } else {
         container.innerHTML = `
           <div style="margin-bottom:10px;">
-            製作費：<input type="number" id="modalCraftFee" value="0" style="margin-top:4px;"> 楓幣
+            製作費：<input type="text" id="modalCraftFee" class="comma-input" value="0" style="margin-top:4px;"> 楓幣
           </div>
           <div style="font-weight:bold; font-size:13px; margin-bottom:6px; color:#1f497d;">材料需求清單：</div>
           <div id="modalIngredientsList"></div>
@@ -810,12 +857,13 @@ window.addEventListener('load', function() {
         `;
         bindModalAddIngEvent(allItemNames);
       }
+      bindCommaInputs();
     };
 
     if (!p.isOreRecipe) {
       bindModalAddIngEvent(allItemNames);
     }
-
+    bindCommaInputs();
     document.getElementById('editModal').classList.add('active');
   }
 
@@ -831,11 +879,12 @@ window.addEventListener('load', function() {
           <select class="modal-ing-name" style="flex:1;">
             ${allItemNames.map(mat => `<option value="${mat}">${mat}</option>`).join('')}
           </select>
-          <input type="number" class="modal-ing-qty" value="1" style="width:80px;">個
+          <input type="text" class="modal-ing-qty comma-input" value="1" style="width:80px;">個
           <button type="button" class="btn-sm btn-danger modal-del-ing">✕</button>
         `;
         row.querySelector('.modal-del-ing').onclick = function() { row.remove(); };
         listContainer.appendChild(row);
+        bindCommaInputs();
       };
     }
     document.querySelectorAll('.modal-del-ing').forEach(btn => {
@@ -858,19 +907,19 @@ window.addEventListener('load', function() {
     }
 
     p.name = newName;
-    p.marketPrice = Number(document.getElementById('modalMarketPrice').value) || 0;
+    p.marketPrice = parseNumber(document.getElementById('modalMarketPrice').value);
     p.isOreRecipe = document.getElementById('modalIsOre').checked;
 
     if (p.isOreRecipe) {
       p.oreName = document.getElementById('modalOreName').value;
-      p.craftFee = Number(document.getElementById('modalOreFee').value) || 300;
+      p.craftFee = parseNumber(document.getElementById('modalOreFee').value);
       p.ingredients = [];
     } else {
-      p.craftFee = Number(document.getElementById('modalCraftFee').value) || 0;
+      p.craftFee = parseNumber(document.getElementById('modalCraftFee').value);
       p.ingredients = [];
       document.querySelectorAll('.modal-ing-row').forEach(row => {
         const ingName = row.querySelector('.modal-ing-name').value;
-        const ingQty = Number(row.querySelector('.modal-ing-qty').value) || 1;
+        const ingQty = parseNumber(row.querySelector('.modal-ing-qty').value);
         p.ingredients.push({ name: ingName, qty: ingQty });
       });
     }
@@ -1098,6 +1147,7 @@ window.addEventListener('load', function() {
       intervalSelect.value = appData.slideshowTime;
     }
     setupSlideshow();
+    bindCommaInputs();
   }
 
   refreshUI();
