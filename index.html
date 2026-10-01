@@ -166,7 +166,6 @@
     }
     .price-item { display: flex; flex-direction: column; background: #f8f9fa; padding: 10px; border-radius: 8px; border: 1px solid #eee; position: relative; }
     .price-item label { font-size: 13px; font-weight: bold; color: #333; margin-bottom: 4px; }
-    .price-subtext { font-size: 11px; color: #666; margin-top: 4px; }
     .mat-del-btn { position: absolute; top: 6px; right: 6px; background: none; border: none; color: #dc3545; font-size: 14px; cursor: pointer; }
 
     select, input { padding: 8px 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; width: 100%; outline: none; background: #fff; }
@@ -277,7 +276,7 @@
     <button class="tab-btn" data-tab="tabContent-exp">📊 經驗與打怪效率計算機 (本地獨立運算)</button>
     <button class="tab-btn" data-tab="tabContent-manage">📜 管理成品</button>
     <button class="tab-btn" data-tab="tabContent-add">➕ 新增成品配方</button>
-    <button class="tab-btn" data-tab="tabContent-settings" id="btnTabSettings">⚙️️ 設定</button>
+    <button class="tab-btn" data-tab="tabContent-settings" id="btnTabSettings">⚙️ 設定</button>
   </div>
 
   <div id="tabContent-calc" class="tab-content active">
@@ -293,7 +292,7 @@
       <select id="productSelect" style="font-size:16px; padding:10px; font-weight:bold;"></select>
       
       <div style="margin-top: 12px; display: flex; align-items: center; gap: 10px; background: rgba(255, 255, 255, 0.8); padding: 8px 12px; border-radius: 8px; border: 1px solid #ddd;">
-        <span style="font-weight: bold; font-size: 13px; color: #1f497d; white-space: nowrap;">🏷 當前市場售價 / 最低價：</span>
+        <span style="font-weight: bold; font-size: 13px; color: #1f497d; white-space: nowrap;">🏷️ 當前市場售價 / 最低價：</span>
         <input type="text" id="inlineMarketPrice" class="comma-input" placeholder="請手動輸入要測試的拍賣售價" style="font-weight: bold; color: #c55a11;">
       </div>
 
@@ -325,7 +324,7 @@
 
     <div style="background:rgba(255,255,255,0.95); padding:15px; border-radius:10px; margin-bottom:15px; border:1px solid #ddd; display:flex; gap:10px; align-items:center;">
       <div style="display:flex; flex-direction:column; white-space:nowrap;">
-        <label style="font-weight:bold; font-size:13px; color:#1f497d;">✏ 名稱：</label>
+        <label style="font-weight:bold; font-size:13px; color:#1f497d;">✏️ 名稱：</label>
         <span style="font-size:11px; color:#666; font-weight:bold;">（隨便填）</span>
       </div>
       <input type="text" id="expSubTabAuthor" placeholder="例如：小明的測試區" style="flex:1; font-weight:bold; color:#1f497d;">
@@ -737,7 +736,6 @@ window.addEventListener('load', function() {
           ${!isUsed ? `<button class="mat-del-btn" title="刪除此雜物">✕</button>` : ''}
           <label>${mat} (單價)</label>
           <input type="text" class="mat-price-input comma-input" data-mat="${mat}" value="${formatNumber(appData.rawMaterials[mat])}">
-          <div class="price-subtext">打怪掉落 / 基礎材料</div>
         </div>
       `;
     }).join('');
