@@ -328,7 +328,7 @@
         <span style="font-size:11px; color:#666; font-weight:bold;">（隨便填）</span>
       </div>
       <input type="text" id="expSubTabAuthor" placeholder="例如：小明的測試區" style="flex:1; font-weight:bold; color:#1f497d;">
-      <button class="btn-sm btn-primary" id="btnClearExpNumbers" style="background:#f0ad4e;">🧹 清空數字（保留尾巴與觸角）</button>
+      <button class="btn-sm btn-primary" id="btnClearExpNumbers" style="background:#f0ad4e;">🧹 清空數字（保留尾巴觸角名稱與單價）</button>
     </div>
 
     <div class="section-title"><span>⏱️ 1. 測試時間區間</span></div>
@@ -362,6 +362,9 @@
     <div class="section-title">
       <span>🎒 3. 掉落物統計與收益 (自動計入楓幣收入)</span>
       <button class="btn-sm btn-add" id="btnAddDropItem">➕ 新增掉落物項目</button>
+    </div>
+    <div style="font-size:12px; color:#555; margin-bottom:8px; background:rgba(255,255,255,0.75); padding:6px 12px; border-radius:6px; border:1px dashed #ccc;">
+      💡 開始數量預設為 0，可不填（代表原本背包沒有此物）
     </div>
     <div id="dropItemsContainer" style="margin-bottom: 15px;"></div>
 
@@ -539,8 +542,8 @@ window.addEventListener('load', function() {
     mesosStart: 0,
     mesosEnd: 0,
     dropItems: [
-      { name: "觸角", price: 303, qty: 0 },
-      { name: "尾巴", price: 310, qty: 0 }
+      { name: "觸角", price: 303, startQty: 0, endQty: 0 },
+      { name: "尾巴", price: 310, startQty: 0, endQty: 0 }
     ],
     dropWeaponQty: 0,
     hpPrice: 0,
@@ -966,29 +969,43 @@ window.addEventListener('load', function() {
     const tab = localExpData.expTabs[localExpData.activeExpTabIdx];
     if (!tab.dropItems) {
       tab.dropItems = [
-        { name: "觸角", price: 303, qty: 0 },
-        { name: "尾巴", price: 310, qty: 0 }
+        { name: "觸角", price: 303, startQty: 0, endQty: 0 },
+        { name: "尾巴", price: 310, startQty: 0, endQty: 0 }
       ];
     }
+    // 相容舊資料：原本只有 qty 的話轉成 startQty=0、endQty=qty
+    tab.dropItems.forEach(item => {
+      if (item.qty !== undefined && item.startQty === undefined) {
+        item.startQty = 0;
+        item.endQty = item.qty || 0;
+        delete item.qty;
+      }
+      if (item.startQty === undefined) item.startQty = 0;
+      if (item.endQty === undefined) item.endQty = 0;
+    });
+
     const container = document.getElementById('dropItemsContainer');
     container.innerHTML = tab.dropItems.map((item, idx) => `
       <div class="drop-item-row" data-didx="${idx}">
-        <input type="text" class="drop-name" value="${item.name}" placeholder="物品名稱" style="flex:2;">
+        <input type="text" class="drop-name" value="${item.name}" placeholder="物品名稱" style="flex:1.6;">
         <input type="text" class="drop-price comma-input" value="${formatNumber(item.price)}" placeholder="單價" style="flex:1;">
-        <span style="font-size:13px; font-weight:bold;">單價(楓幣)</span>
-        <input type="text" class="drop-qty comma-input" value="${formatNumber(item.qty)}" placeholder="數量" style="flex:1;">
-        <span style="font-size:13px; font-weight:bold;">個</span>
+        <span style="font-size:12px; font-weight:bold; white-space:nowrap;">單價</span>
+        <input type="text" class="drop-start comma-input" value="${item.startQty ? formatNumber(item.startQty) : ''}" placeholder="開始" style="width:72px;">
+        <span style="font-weight:bold;">➔</span>
+        <input type="text" class="drop-end comma-input" value="${item.endQty ? formatNumber(item.endQty) : ''}" placeholder="結束" style="width:72px;">
+        <span style="font-size:12px; font-weight:bold;">個</span>
         <button class="btn-sm btn-danger drop-del-btn" data-didx="${idx}">✕</button>
       </div>
     `).join('');
 
-    container.querySelectorAll('.drop-name, .drop-price, .drop-qty').forEach(input => {
+    container.querySelectorAll('.drop-name, .drop-price, .drop-start, .drop-end').forEach(input => {
       input.oninput = function() {
         const row = this.closest('.drop-item-row');
         const dIdx = Number(row.getAttribute('data-didx'));
         tab.dropItems[dIdx].name = row.querySelector('.drop-name').value;
         tab.dropItems[dIdx].price = parseNumber(row.querySelector('.drop-price').value);
-        tab.dropItems[dIdx].qty = parseNumber(row.querySelector('.drop-qty').value);
+        tab.dropItems[dIdx].startQty = parseNumber(row.querySelector('.drop-start').value);
+        tab.dropItems[dIdx].endQty = parseNumber(row.querySelector('.drop-end').value);
         saveExpDataLocally();
         calculateExpEfficiency();
       };
@@ -1062,7 +1079,7 @@ window.addEventListener('load', function() {
     const tab = localExpData.expTabs[localExpData.activeExpTabIdx];
     if (!tab) return;
 
-    if (confirm('確定要清空當前分頁的數字嗎？（尾巴、觸角及其數量與價錢會完整保留）')) {
+    if (confirm('確定要清空當前分頁的數字嗎？（尾巴、觸角的名稱與單價會保留，數量會歸零）')) {
       tab.testMinutes = 60;
       tab.expStart = 0;
       tab.expEnd = 0;
@@ -1081,22 +1098,23 @@ window.addEventListener('load', function() {
 
       if (tab.dropItems) {
         tab.dropItems.forEach(item => {
-          if (item.name !== '尾巴' && item.name !== '觸角') {
-            item.qty = 0;
-          }
+          // 尾巴、觸角保留名稱與單價，只清空數量；其他項目也清空數量
+          item.startQty = 0;
+          item.endQty = 0;
+          if (item.qty !== undefined) delete item.qty;
         });
       }
 
       saveExpDataLocally();
       loadActiveExpTabToUI();
-      alert('已成功清空統計數字，尾巴與觸角資料已完整保留！');
+      alert('已成功清空統計數字，尾巴與觸角的名稱與單價已保留！');
     }
   };
 
   document.getElementById('btnAddDropItem').onclick = function() {
     const tab = localExpData.expTabs[localExpData.activeExpTabIdx];
     if (!tab.dropItems) tab.dropItems = [];
-    tab.dropItems.push({ name: "新掉落物", price: 0, qty: 0 });
+    tab.dropItems.push({ name: "新掉落物", price: 0, startQty: 0, endQty: 0 });
     saveExpDataLocally();
     renderDropItemsForActiveTab();
   };
@@ -1117,7 +1135,11 @@ window.addEventListener('load', function() {
     let dropMesos = 0;
     if (tab.dropItems) {
       tab.dropItems.forEach(item => {
-        dropMesos += (Number(item.price) || 0) * (Number(item.qty) || 0);
+        // 相容舊資料：若還有 qty 則直接使用
+        const gained = item.qty !== undefined
+          ? (Number(item.qty) || 0)
+          : Math.max(0, (Number(item.endQty) || 0) - (Number(item.startQty) || 0));
+        dropMesos += (Number(item.price) || 0) * gained;
       });
     }
 
