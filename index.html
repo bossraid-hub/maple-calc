@@ -107,7 +107,7 @@
       z-index: 2;
       width: 100%;
       max-width: 880px;
-      background: rgba(255, 255, 255, 0.92);
+      background: rgba(255, 255, 255, 0.82);
       padding: 25px;
       border-radius: 16px;
       box-shadow: 0 10px 30px rgba(0,0,0,0.3);
@@ -546,6 +546,23 @@
       </div>
       <div style="font-weight:bold; margin-top:10px;">目前橫版相冊清單：</div>
       <div class="bg-thumbs" id="bannerThumbsContainer"></div>
+    </div>
+
+    <div class="section-title">🖼️ 3. 全頁大背景圖片</div>
+    <div class="bg-setting-panel">
+      <div style="margin-bottom: 12px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+        <label style="font-weight:bold;">上傳電腦圖片：</label>
+        <input type="file" id="fullBgFileInput" accept="image/*" style="flex:1; background:white;">
+      </div>
+      <div style="margin-bottom: 12px; display:flex; gap:10px; align-items:center;">
+        <label style="font-weight:bold;">圖片網址：</label>
+        <input type="text" id="fullBgUrlInput" placeholder="貼上公開圖片網址" style="flex:1;">
+        <button class="btn-sm btn-secondary" id="btnSetFullBgUrl">套用</button>
+      </div>
+      <div style="font-size:12px; color:#666; margin-top:6px;">
+        大背景會顯示在整個頁面後方。主要白色介面已調成半透明，方便看到背景。
+      </div>
+      <button class="btn-sm btn-danger" id="btnClearFullBg" style="margin-top:10px;">清除大背景</button>
     </div>
 
     <div class="section-title">🎞️ 相冊自動輪播設定</div>
@@ -1873,6 +1890,49 @@ window.addEventListener('load', function() {
   renderScrollStages();
   updateFinalSellLabel();
   calculateScrollCost();
+
+  // 全頁大背景
+  function applyFullBackground(url) {
+    if (url) {
+      document.body.style.backgroundImage = `url('${url}')`;
+      document.body.style.backgroundSize = 'cover';
+      document.body.style.backgroundPosition = 'center';
+      document.body.style.backgroundAttachment = 'fixed';
+    } else {
+      document.body.style.backgroundImage = 'none';
+    }
+  }
+
+  document.getElementById('fullBgFileInput').onchange = function(e) {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        applyFullBackground(event.target.result);
+        localStorage.setItem('maple_full_bg', event.target.result);
+        e.target.value = '';
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  document.getElementById('btnSetFullBgUrl').onclick = function() {
+    const url = document.getElementById('fullBgUrlInput').value.trim();
+    if (url) {
+      applyFullBackground(url);
+      localStorage.setItem('maple_full_bg', url);
+      document.getElementById('fullBgUrlInput').value = '';
+    }
+  };
+
+  document.getElementById('btnClearFullBg').onclick = function() {
+    applyFullBackground('');
+    localStorage.removeItem('maple_full_bg');
+  };
+
+  // 載入已儲存的大背景
+  const savedFullBg = localStorage.getItem('maple_full_bg');
+  if (savedFullBg) applyFullBackground(savedFullBg);
 
   function refreshUI() {
     renderMarketGrid();
