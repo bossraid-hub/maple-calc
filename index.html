@@ -1739,10 +1739,18 @@ window.addEventListener('load', function() {
 
     let needEnter = new Array(n).fill(0);
     if (isGroup) {
-      // 分組模式：每組獨立計算「需要成功幾次 / 成功率」
+      // 分組模式：每一組「共 N 張，需過 N 次」＝必須整組全過，失敗就整組重來
       for (let i = 0; i < n; i++) {
-        const need = scrollStages[i].needSuccess || 1;
-        needEnter[i] = need / rates[i];
+        const slots = scrollStages[i].slots || 1;
+        const need = scrollStages[i].needSuccess || slots;
+        // 如果需過次數 == 張數，代表必須全過
+        if (need >= slots) {
+          const pAll = Math.pow(rates[i], slots);
+          needEnter[i] = slots / pAll; // 期望嘗試次數（含重來）
+        } else {
+          // 否則用一般期望（需要 k 次成功）
+          needEnter[i] = need / rates[i];
+        }
       }
     } else {
       // 金字塔：必須依序全過
