@@ -518,6 +518,14 @@
   </div>
 
   <div id="tabContent-settings" class="tab-content">
+    <div id="settingsLoginBox" style="background:rgba(255,255,255,0.95); padding:30px 20px; border-radius:12px; text-align:center; max-width:360px; margin:40px auto;">
+      <div style="font-size:18px; font-weight:bold; color:#c55a11; margin-bottom:12px;">🔒 管理員模式</div>
+      <input type="password" id="settingsPassword" placeholder="請輸入密碼" style="width:100%; padding:10px; margin-bottom:12px; border-radius:6px; border:1px solid #ccc;">
+      <button class="btn-sm btn-primary" id="btnSettingsLogin" style="width:100%; padding:10px;">進入設定</button>
+      <div id="settingsLoginMsg" style="color:#dc3545; font-size:13px; margin-top:8px;"></div>
+    </div>
+
+    <div id="settingsContent" style="display:none;">
     <div class="section-title">🖼️ 1. 直版側邊相冊管理</div>
     <div class="bg-setting-panel">
       <div style="margin-bottom: 12px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
@@ -551,7 +559,7 @@
     <div class="section-title">🖼️ 3. 全頁大背景圖片</div>
     <div class="bg-setting-panel">
       <div style="margin-bottom: 12px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-        <label style="font-weight:bold;">上傳電腦圖片：</label>
+        <label style="font-weight:bold;">上傳圖片：</label>
         <input type="file" id="fullBgFileInput" accept="image/*" style="flex:1; background:white;">
       </div>
       <div style="margin-bottom: 12px; display:flex; gap:10px; align-items:center;">
@@ -559,10 +567,33 @@
         <input type="text" id="fullBgUrlInput" placeholder="貼上公開圖片網址" style="flex:1;">
         <button class="btn-sm btn-secondary" id="btnSetFullBgUrl">套用</button>
       </div>
-      <div style="font-size:12px; color:#666; margin-top:6px;">
-        大背景會顯示在整個頁面後方。主要白色介面已調成半透明，方便看到背景。
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:12px 0;">
+        <div>
+          <label style="font-size:13px; font-weight:bold;">大小</label>
+          <select id="fullBgSize" style="width:100%; margin-top:4px;">
+            <option value="cover">填滿（Cover）</option>
+            <option value="contain">完整顯示（Contain）</option>
+            <option value="100% auto">寬度滿版</option>
+            <option value="auto 100%">高度滿版</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:13px; font-weight:bold;">位置</label>
+          <select id="fullBgPosition" style="width:100%; margin-top:4px;">
+            <option value="center">置中</option>
+            <option value="top">靠上</option>
+            <option value="bottom">靠下</option>
+            <option value="left">靠左</option>
+            <option value="right">靠右</option>
+          </select>
+        </div>
       </div>
-      <button class="btn-sm btn-danger" id="btnClearFullBg" style="margin-top:10px;">清除大背景</button>
+
+      <div style="font-weight:bold; margin:10px 0 6px;">已上傳的背景（點擊套用）：</div>
+      <div id="fullBgHistory" style="display:flex; gap:8px; flex-wrap:wrap;"></div>
+
+      <button class="btn-sm btn-danger" id="btnClearFullBg" style="margin-top:12px;">清除大背景</button>
     </div>
 
     <div class="section-title">🎞️ 相冊自動輪播設定</div>
@@ -581,6 +612,7 @@
           </select>
         </div>
       </div>
+    </div>
     </div>
   </div>
 </div>
@@ -1891,16 +1923,62 @@ window.addEventListener('load', function() {
   updateFinalSellLabel();
   calculateScrollCost();
 
-  // 全頁大背景
-  function applyFullBackground(url) {
+  // ========== 設定頁管理員密碼 ==========
+  const SETTINGS_PASSWORD = "0225"; // 可自行修改
+  document.getElementById('btnSettingsLogin').onclick = function() {
+    const pwd = document.getElementById('settingsPassword').value;
+    if (pwd === SETTINGS_PASSWORD) {
+      document.getElementById('settingsLoginBox').style.display = 'none';
+      document.getElementById('settingsContent').style.display = 'block';
+      localStorage.setItem('maple_settings_auth', '1');
+    } else {
+      document.getElementById('settingsLoginMsg').innerText = '密碼錯誤';
+    }
+  };
+  if (localStorage.getItem('maple_settings_auth') === '1') {
+    document.getElementById('settingsLoginBox').style.display = 'none';
+    document.getElementById('settingsContent').style.display = 'block';
+  }
+
+  // ========== 全頁大背景（含大小、位置、歷史） ==========
+  let fullBgHistory = JSON.parse(localStorage.getItem('maple_full_bg_history') || '[]');
+
+  function applyFullBackground(url, size, position) {
     if (url) {
       document.body.style.backgroundImage = `url('${url}')`;
-      document.body.style.backgroundSize = 'cover';
-      document.body.style.backgroundPosition = 'center';
+      document.body.style.backgroundSize = size || document.getElementById('fullBgSize').value || 'cover';
+      document.body.style.backgroundPosition = position || document.getElementById('fullBgPosition').value || 'center';
       document.body.style.backgroundAttachment = 'fixed';
+      document.body.style.backgroundRepeat = 'no-repeat';
     } else {
       document.body.style.backgroundImage = 'none';
     }
+  }
+
+  function saveFullBgHistory(url) {
+    if (!url) return;
+    fullBgHistory = fullBgHistory.filter(u => u !== url);
+    fullBgHistory.unshift(url);
+    if (fullBgHistory.length > 12) fullBgHistory.pop();
+    localStorage.setItem('maple_full_bg_history', JSON.stringify(fullBgHistory));
+    renderFullBgHistory();
+  }
+
+  function renderFullBgHistory() {
+    const box = document.getElementById('fullBgHistory');
+    if (!box) return;
+    box.innerHTML = fullBgHistory.map(url => `
+      <div style="width:70px; height:50px; border-radius:6px; overflow:hidden; border:2px solid #ddd; cursor:pointer; position:relative;">
+        <img src="${url}" style="width:100%; height:100%; object-fit:cover;" data-url="${url}">
+      </div>
+    `).join('');
+    box.querySelectorAll('img').forEach(img => {
+      img.onclick = function() {
+        const url = this.getAttribute('data-url');
+        applyFullBackground(url);
+        localStorage.setItem('maple_full_bg', url);
+      };
+    });
   }
 
   document.getElementById('fullBgFileInput').onchange = function(e) {
@@ -1908,8 +1986,10 @@ window.addEventListener('load', function() {
     if (file) {
       const reader = new FileReader();
       reader.onload = function(event) {
-        applyFullBackground(event.target.result);
-        localStorage.setItem('maple_full_bg', event.target.result);
+        const url = event.target.result;
+        applyFullBackground(url);
+        localStorage.setItem('maple_full_bg', url);
+        saveFullBgHistory(url);
         e.target.value = '';
       };
       reader.readAsDataURL(file);
@@ -1921,8 +2001,18 @@ window.addEventListener('load', function() {
     if (url) {
       applyFullBackground(url);
       localStorage.setItem('maple_full_bg', url);
+      saveFullBgHistory(url);
       document.getElementById('fullBgUrlInput').value = '';
     }
+  };
+
+  document.getElementById('fullBgSize').onchange = function() {
+    const url = localStorage.getItem('maple_full_bg');
+    if (url) applyFullBackground(url, this.value);
+  };
+  document.getElementById('fullBgPosition').onchange = function() {
+    const url = localStorage.getItem('maple_full_bg');
+    if (url) applyFullBackground(url, null, this.value);
   };
 
   document.getElementById('btnClearFullBg').onclick = function() {
@@ -1930,9 +2020,9 @@ window.addEventListener('load', function() {
     localStorage.removeItem('maple_full_bg');
   };
 
-  // 載入已儲存的大背景
   const savedFullBg = localStorage.getItem('maple_full_bg');
   if (savedFullBg) applyFullBackground(savedFullBg);
+  renderFullBgHistory();
 
   function refreshUI() {
     renderMarketGrid();
