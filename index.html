@@ -251,8 +251,11 @@
     }
     .mode-card:has(input:checked) {
       border-color: #c55a11 !important;
-      background: #fff8f0 !important;
-      box-shadow: 0 2px 8px rgba(197,90,17,0.15);
+      background: linear-gradient(180deg, #fff8f0 0%, #fff 100%) !important;
+      box-shadow: 0 4px 12px rgba(197,90,17,0.18);
+    }
+    .mode-card input[type="radio"] {
+      accent-color: #c55a11;
     }
   </style>
 </head>
@@ -437,20 +440,16 @@
   <!-- 卷軸金字塔衝卷成本計算機 (本地運算) -->
   <div id="tabContent-scroll" class="tab-content">
     <div class="section-title"><span>📜 衝卷成本計算</span></div>
-    <div style="margin-bottom:12px; display:grid; grid-template-columns:1fr 1fr; gap:12px;">
-      <label style="cursor:pointer; background:#fff; border:2px solid #ddd; border-radius:10px; padding:12px 14px; display:flex; align-items:flex-start; gap:10px; transition:all 0.2s;" class="mode-card">
-        <input type="radio" name="scrollMode" id="modePyramid" value="pyramid" checked style="margin-top:3px;">
-        <div>
-          <div style="font-weight:bold; color:#1f497d;">金字塔衝法</div>
-          <div style="font-size:12px; color:#666; margin-top:2px;">必須依序一張一張全部過</div>
-        </div>
+    <div style="margin-bottom:12px; display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+      <label class="mode-card" style="cursor:pointer; background:#fff; border:2px solid #e0e0e0; border-radius:12px; padding:14px 12px; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; min-height:80px; transition:all 0.2s;">
+        <input type="radio" name="scrollMode" id="modePyramid" value="pyramid" checked style="margin-bottom:6px; transform:scale(1.2);">
+        <div style="font-weight:bold; color:#1f497d; font-size:15px;">金字塔衝法</div>
+        <div style="font-size:12px; color:#777; margin-top:3px; line-height:1.3;">必須依序全部過</div>
       </label>
-      <label style="cursor:pointer; background:#fff; border:2px solid #c55a11; border-radius:10px; padding:12px 14px; display:flex; align-items:flex-start; gap:10px; transition:all 0.2s;" class="mode-card">
-        <input type="radio" name="scrollMode" id="modeGroup" value="group" style="margin-top:3px;">
-        <div>
-          <div style="font-weight:bold; color:#c55a11;">分組過幾張</div>
-          <div style="font-size:12px; color:#666; margin-top:2px;">例如：前2張10%過2，後3張60%過2</div>
-        </div>
+      <label class="mode-card" style="cursor:pointer; background:#fff; border:2px solid #e0e0e0; border-radius:12px; padding:14px 12px; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; min-height:80px; transition:all 0.2s;">
+        <input type="radio" name="scrollMode" id="modeGroup" value="group" style="margin-bottom:6px; transform:scale(1.2);">
+        <div style="font-weight:bold; color:#c55a11; font-size:15px;">分組過幾張</div>
+        <div style="font-size:12px; color:#777; margin-top:3px; line-height:1.3;">例如前2張10%過2<br>後3張60%過2</div>
       </label>
     </div>
     <div id="scrollModeHint" style="font-size:12px; color:#555; margin-bottom:12px; background:rgba(255,255,255,0.75); padding:8px 12px; border-radius:6px; border:1px dashed #ccc; line-height:1.6;">
@@ -1695,6 +1694,11 @@ window.addEventListener('load', function() {
         }
         if (row.querySelector('.scroll-need')) {
           scrollStages[sIdx].needSuccess = Math.max(1, parseNumber(row.querySelector('.scroll-need').value) || 1);
+        }
+        // 即時更新殘次 placeholder
+        const residualInput = row.querySelector('.scroll-residual');
+        if (residualInput && isGroup) {
+          residualInput.placeholder = (scrollStages[sIdx].slots || 1) + '過' + (scrollStages[sIdx].needSuccess || 1) + '售價';
         }
         calculateScrollCost();
       };
