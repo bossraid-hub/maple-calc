@@ -431,11 +431,19 @@
 
   <!-- 卷軸金字塔衝卷成本計算機 (本地運算) -->
   <div id="tabContent-scroll" class="tab-content">
-    <div class="section-title"><span>📜 金字塔衝卷法成本計算機</span></div>
+    <div class="section-title"><span>📜 卷軸成本計算機</span></div>
+    <div style="margin-bottom:12px; display:flex; gap:15px; align-items:center; flex-wrap:wrap;">
+      <label style="font-weight:bold; cursor:pointer;">
+        <input type="radio" name="scrollMode" id="modePyramid" value="pyramid" checked> 金字塔衝法（必須依序全過）
+      </label>
+      <label style="font-weight:bold; cursor:pointer;">
+        <input type="radio" name="scrollMode" id="modeFree" value="free"> 指定過幾張（可設定每階段需要成功幾次）
+      </label>
+    </div>
     <div style="font-size:12px; color:#555; margin-bottom:12px; background:rgba(255,255,255,0.75); padding:8px 12px; border-radius:6px; border:1px dashed #ccc; line-height:1.6;">
-      💡 金字塔衝法：先大量沖第一張 → 成功的留下繼續沖下一張，失敗的賣商店回收。<br>
-      <strong>殘次售價</strong> = 這一張成功、但下一張失敗時，這個半成品可以賣的市場價。<br>
-      數字可直接輸入。卷軸單價直接打數字就當「萬」（例如輸入 45 就是 45萬）。其他欄位可輸入「45萬」或完整數字。
+      💡 <strong>金字塔模式</strong>：必須依序全部過。<br>
+      💡 <strong>指定過幾張模式</strong>：每階段可設定「需要成功幾次」（例如後面 60% 卷軸只要過 3 次就好）。<br>
+      卷軸單價直接輸入數字即當「萬」。
     </div>
 
     <div class="exp-grid">
@@ -709,6 +717,8 @@ window.addEventListener('load', function() {
   function bindCommaInputs() {
     document.querySelectorAll('.comma-input').forEach(input => {
       if (input.dataset.commaBound) return;
+      // 卷軸單價有特殊「萬」處理，不套用一般 blur
+      if (input.classList.contains('scroll-price')) return;
       input.dataset.commaBound = "true";
 
       input.addEventListener('focus', function() {
@@ -1617,42 +1627,64 @@ window.addEventListener('load', function() {
 
   // ========== 卷軸金字塔衝卷成本計算機 ==========
   let scrollStages = [
-    { rate: 10, price: 0, residualSell: 0 },
-    { rate: 60, price: 0, residualSell: 0 }
+    { rate: 10, price: 0, residualSell: 0, needSuccess: 1 },
+    { rate: 60, price: 0, residualSell: 0, needSuccess: 1 }
   ];
 
   function renderScrollStages() {
     const container = document.getElementById('scrollStagesContainer');
     if (!container) return;
     container.innerHTML = scrollStages.map((stage, idx) => `
-      <div class="drop-item-row" data-sidx="${idx}" style="background:#f8f9fa; padding:10px 12px; border-radius:8px; margin-bottom:8px; border:1px solid #eee; flex-wrap:wrap; gap:8px;">
-        <div style="flex:0 0 70px; font-weight:bold; color:#1f497d; font-size:14px;">第 ${idx + 1} 張</div>
-        <input type="text" class="scroll-rate comma-input" value="${stage.rate}" placeholder="成功率%" style="width:70px; text-align:center;">
+      <div class="drop-item-row" data-sidx="${idx}" style="background:#f8f9fa; padding:10px 12px; border-radius:8px; margin-bottom:8px; border:1px solid #eee; flex-wrap:wrap; gap:8px; align-items:center;">
+        <div style="flex:0 0 60px; font-weight:bold; color:#1f497d; font-size:14px;">第 ${idx + 1} 張</div>
+        <input type="text" class="scroll-rate comma-input" value="${stage.rate}" placeholder="%" style="width:60px; text-align:center;">
         <span style="font-size:13px; font-weight:bold;">%</span>
-        <input type="text" class="scroll-price comma-input" value="${stage.price ? formatNumber(stage.price) : ''}" placeholder="卷軸單價（輸入45=45萬）" style="flex:1; min-width:140px;">
-        <input type="text" class="scroll-residual comma-input" value="${stage.residualSell ? formatNumber(stage.residualSell) : ''}" placeholder="下一張失敗時售價（殘次）" style="flex:1; min-width:160px;">
+        <input type="text" class="scroll-price comma-input" value="${stage.price ? formatNumber(stage.price) : ''}" placeholder="卷軸單價（45=45萬）" style="flex:1; min-width:130px;">
+        <input type="text" class="scroll-residual comma-input" value="${stage.residualSell ? formatNumber(stage.residualSell) : ''}" placeholder="下一張失敗時售價" style="flex:1; min-width:140px;">
+        <div class="need-success-wrap" style="display:flex; align-items:center; gap:4px;">
+          <span style="font-size:12px; white-space:nowrap;">需成功</span>
+          <input type="text" class="scroll-need comma-input" value="${stage.needSuccess || 1}" style="width:50px; text-align:center;">
+          <span style="font-size:12px;">次</span>
+        </div>
         <button class="btn-sm btn-danger scroll-del-btn" data-sidx="${idx}">✕</button>
       </div>
     `).join('');
 
-    container.querySelectorAll('.scroll-rate, .scroll-price, .scroll-residual').forEach(input => {
+    container.querySelectorAll('.scroll-rate, .scroll-price, .scroll-residual, .scroll-need').forEach(input => {
       input.oninput = function() {
         const row = this.closest('.drop-item-row');
         const sIdx = Number(row.getAttribute('data-sidx'));
         scrollStages[sIdx].rate = parseNumber(row.querySelector('.scroll-rate').value) || 0;
 
-        // 卷軸單價：直接輸入數字就當「萬」（例如 45 → 45萬）
-        let priceStr = row.querySelector('.scroll-price').value.trim();
-        if (priceStr && !priceStr.includes('萬') && !priceStr.includes('w') && !priceStr.includes(',')) {
-          const num = parseFloat(priceStr.replace(/[^\d.]/g, '')) || 0;
-          scrollStages[sIdx].price = Math.round(num * 10000);
-        } else {
-          scrollStages[sIdx].price = parseNumber(priceStr);
+        // 卷軸單價特殊處理：純數字當「萬」
+        const priceInput = row.querySelector('.scroll-price');
+        let priceStr = priceInput.value.trim();
+        let priceVal = 0;
+        if (priceStr) {
+          if (priceStr.includes('萬') || priceStr.includes('w')) {
+            priceVal = parseNumber(priceStr);
+          } else {
+            const clean = priceStr.replace(/,/g, '');
+            const num = parseFloat(clean) || 0;
+            priceVal = num < 10000 ? Math.round(num * 10000) : Math.round(num);
+          }
         }
+        scrollStages[sIdx].price = priceVal;
 
         scrollStages[sIdx].residualSell = parseNumber(row.querySelector('.scroll-residual').value);
+        scrollStages[sIdx].needSuccess = Math.max(1, parseNumber(row.querySelector('.scroll-need').value) || 1);
         calculateScrollCost();
       };
+    });
+
+    // 特別處理卷軸單價的 blur，讓顯示正確
+    container.querySelectorAll('.scroll-price').forEach(input => {
+      input.addEventListener('blur', function() {
+        const row = this.closest('.drop-item-row');
+        const sIdx = Number(row.getAttribute('data-sidx'));
+        const val = scrollStages[sIdx].price;
+        this.value = val ? formatNumber(val) : '';
+      });
     });
 
     container.querySelectorAll('.scroll-del-btn').forEach(btn => {
@@ -1669,7 +1701,7 @@ window.addEventListener('load', function() {
   }
 
   document.getElementById('btnAddScrollStage').onclick = function() {
-    scrollStages.push({ rate: 30, price: 0, residualSell: 0 });
+    scrollStages.push({ rate: 30, price: 0, residualSell: 0, needSuccess: 1 });
     renderScrollStages();
     calculateScrollCost();
   };
@@ -1690,14 +1722,22 @@ window.addEventListener('load', function() {
       return;
     }
 
+    const isPyramid = document.getElementById('modePyramid').checked;
     const rates = scrollStages.map(s => s.rate / 100);
     const n = rates.length;
 
-    // 從後往前算：要得到 1 個最終成功，各階段需要多少次嘗試
     let needEnter = new Array(n).fill(0);
-    needEnter[n - 1] = 1 / rates[n - 1];
-    for (let i = n - 2; i >= 0; i--) {
-      needEnter[i] = needEnter[i + 1] / rates[i];
+    if (isPyramid) {
+      // 金字塔：必須依序全過，從後往前推
+      needEnter[n - 1] = (scrollStages[n - 1].needSuccess || 1) / rates[n - 1];
+      for (let i = n - 2; i >= 0; i--) {
+        needEnter[i] = needEnter[i + 1] / rates[i] * (scrollStages[i].needSuccess || 1);
+      }
+    } else {
+      // 指定過幾張：各階段獨立計算需要的嘗試次數
+      for (let i = 0; i < n; i++) {
+        needEnter[i] = (scrollStages[i].needSuccess || 1) / rates[i];
+      }
     }
     const needBase = needEnter[0];
 
@@ -1757,6 +1797,11 @@ window.addEventListener('load', function() {
     if (el) {
       el.oninput = calculateScrollCost;
     }
+  });
+
+  // 模式切換時重新計算
+  document.querySelectorAll('input[name="scrollMode"]').forEach(radio => {
+    radio.onchange = calculateScrollCost;
   });
 
   // 初始化卷軸階段
