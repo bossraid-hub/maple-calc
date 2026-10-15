@@ -6,7 +6,7 @@
   <title>楓之谷成本計算機</title>
   
   <!-- 自訂分頁圖示 -->
-  <link rel="icon" type="image/png" href="https://icons.iconarchive.com/icons/raindropmemory/legend-of-mushroom/128/Maple-icon.png">
+  <link rel="icon" type="image/png" href="images/favicon.png">
 
   <!-- 引入 Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -435,7 +435,7 @@
     <div style="font-size:12px; color:#555; margin-bottom:12px; background:rgba(255,255,255,0.75); padding:8px 12px; border-radius:6px; border:1px dashed #ccc; line-height:1.6;">
       💡 金字塔衝法：先大量沖第一張 → 成功的留下繼續沖下一張，失敗的賣商店回收。<br>
       <strong>殘次售價</strong> = 這一張成功、但下一張失敗時，這個半成品可以賣的市場價。<br>
-      數字可直接輸入，或輸入「45萬」「4.5萬」會自動換成 450,000。
+      數字可直接輸入。卷軸單價直接打數字就當「萬」（例如輸入 45 就是 45萬）。其他欄位可輸入「45萬」或完整數字。
     </div>
 
     <div class="exp-grid">
@@ -1629,7 +1629,7 @@ window.addEventListener('load', function() {
         <div style="flex:0 0 70px; font-weight:bold; color:#1f497d; font-size:14px;">第 ${idx + 1} 張</div>
         <input type="text" class="scroll-rate comma-input" value="${stage.rate}" placeholder="成功率%" style="width:70px; text-align:center;">
         <span style="font-size:13px; font-weight:bold;">%</span>
-        <input type="text" class="scroll-price comma-input" value="${stage.price ? formatNumber(stage.price) : ''}" placeholder="卷軸單價（可輸入 45萬）" style="flex:1; min-width:140px;">
+        <input type="text" class="scroll-price comma-input" value="${stage.price ? formatNumber(stage.price) : ''}" placeholder="卷軸單價（輸入45=45萬）" style="flex:1; min-width:140px;">
         <input type="text" class="scroll-residual comma-input" value="${stage.residualSell ? formatNumber(stage.residualSell) : ''}" placeholder="下一張失敗時售價（殘次）" style="flex:1; min-width:160px;">
         <button class="btn-sm btn-danger scroll-del-btn" data-sidx="${idx}">✕</button>
       </div>
@@ -1640,7 +1640,16 @@ window.addEventListener('load', function() {
         const row = this.closest('.drop-item-row');
         const sIdx = Number(row.getAttribute('data-sidx'));
         scrollStages[sIdx].rate = parseNumber(row.querySelector('.scroll-rate').value) || 0;
-        scrollStages[sIdx].price = parseNumber(row.querySelector('.scroll-price').value);
+
+        // 卷軸單價：直接輸入數字就當「萬」（例如 45 → 45萬）
+        let priceStr = row.querySelector('.scroll-price').value.trim();
+        if (priceStr && !priceStr.includes('萬') && !priceStr.includes('w') && !priceStr.includes(',')) {
+          const num = parseFloat(priceStr.replace(/[^\d.]/g, '')) || 0;
+          scrollStages[sIdx].price = Math.round(num * 10000);
+        } else {
+          scrollStages[sIdx].price = parseNumber(priceStr);
+        }
+
         scrollStages[sIdx].residualSell = parseNumber(row.querySelector('.scroll-residual').value);
         calculateScrollCost();
       };
