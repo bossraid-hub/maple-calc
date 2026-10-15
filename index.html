@@ -274,6 +274,7 @@
   <div class="tabs">
     <button class="tab-btn active" data-tab="tabContent-calc">🧮 快速選成品計算</button>
     <button class="tab-btn" data-tab="tabContent-exp">📊 經驗與打怪效率計算機 (本地獨立運算)</button>
+    <button class="tab-btn" data-tab="tabContent-scroll">📜 卷軸金字塔衝卷成本</button>
     <button class="tab-btn" data-tab="tabContent-manage">📜 管理成品</button>
     <button class="tab-btn" data-tab="tabContent-add">➕ 新增成品配方</button>
     <button class="tab-btn" data-tab="tabContent-settings" id="btnTabSettings">⚙️ 設定</button>
@@ -425,6 +426,49 @@
       <div class="result-row"><span>⏱️ 平均每 10 分鐘楓幣淨收益：</span><span id="resMesos10m" style="font-weight:bold;">0 楓幣</span></div>
       <div class="result-row profit"><span>🚀 平均每 1 小時經驗值：</span><span id="resExp1h" style="color:#1f497d;">0</span></div>
       <div class="result-row profit"><span>💰 平均每 1 小時楓幣淨收益：</span><span id="resMesos1h" style="color:#c55a11;">0 楓幣</span></div>
+    </div>
+  </div>
+
+  <!-- 卷軸金字塔衝卷成本計算機 (本地運算) -->
+  <div id="tabContent-scroll" class="tab-content">
+    <div class="section-title"><span>📜 金字塔衝卷法成本計算機</span></div>
+    <div style="font-size:12px; color:#555; margin-bottom:12px; background:rgba(255,255,255,0.75); padding:8px 12px; border-radius:6px; border:1px dashed #ccc;">
+      💡 適合「先大量沖低成功率卷軸 → 保留成功的再沖下一張」的金字塔衝法。失敗的會自動計入商店售價回收。
+    </div>
+
+    <div class="exp-grid">
+      <div class="exp-field">
+        <label>基底裝備購買單價：</label>
+        <input type="text" id="scrollBasePrice" class="comma-input" value="0" placeholder="例如：1000000">
+      </div>
+      <div class="exp-field">
+        <label>失敗基底賣商店價格：</label>
+        <input type="text" id="scrollBaseNpcSell" class="comma-input" value="0" placeholder="第一張失敗時賣NPC的價格">
+      </div>
+    </div>
+
+    <div class="section-title">
+      <span>卷軸階段設定（從第一張開始）</span>
+      <button class="btn-sm btn-add" id="btnAddScrollStage">➕ 新增階段</button>
+    </div>
+    <div id="scrollStagesContainer" style="margin-bottom:15px;"></div>
+
+    <div class="exp-grid">
+      <div class="exp-field" style="grid-column: 1 / -1;">
+        <label>最終成品市場售價（全部成功後的售價）：</label>
+        <input type="text" id="scrollFinalSell" class="comma-input" value="0" placeholder="例如：50000000">
+      </div>
+    </div>
+
+    <div class="card-result" id="scrollResultBox">
+      <div class="result-row"><span>平均每件成品需要基底裝備：</span><span id="scrollNeedBase">0</span></div>
+      <div class="result-row"><span>平均每件成品卷軸總開銷：</span><span id="scrollTotalScrollCost">0 楓幣</span></div>
+      <div class="result-row"><span>平均殘次品/失敗回收收入：</span><span id="scrollResidualIncome">0 楓幣</span></div>
+      <hr style="border:0; border-top:1px dashed #d9b26a; margin:10px 0;">
+      <div class="result-row total"><span>平均淨成本（含回收）：</span><span id="scrollNetCost">0 楓幣</span></div>
+      <div class="result-row"><span>扣除 3% 稅後淨收：</span><span id="scrollNetIncome3">0 楓幣</span></div>
+      <div class="result-row profit"><span>預期純利潤 (3%)：</span><span id="scrollProfit3">0 楓幣</span></div>
+      <div id="scrollAdvice" style="font-size:13px; margin-top:8px; font-weight:bold;"></div>
     </div>
   </div>
 
@@ -1562,6 +1606,147 @@ window.addEventListener('load', function() {
       document.getElementById('bannerUrlInput').value = '';
     }
   };
+
+  // ========== 卷軸金字塔衝卷成本計算機 ==========
+  let scrollStages = [
+    { rate: 10, price: 0, residualSell: 0 },
+    { rate: 60, price: 0, residualSell: 0 }
+  ];
+
+  function renderScrollStages() {
+    const container = document.getElementById('scrollStagesContainer');
+    if (!container) return;
+    container.innerHTML = scrollStages.map((stage, idx) => `
+      <div class="drop-item-row" data-sidx="${idx}" style="background:#f8f9fa; padding:10px; border-radius:8px; margin-bottom:8px; border:1px solid #eee;">
+        <div style="flex:0.6; font-weight:bold; color:#1f497d;">第 ${idx + 1} 張</div>
+        <input type="text" class="scroll-rate comma-input" value="${stage.rate}" placeholder="成功率%" style="width:80px;">
+        <span style="font-size:13px;">%</span>
+        <input type="text" class="scroll-price comma-input" value="${formatNumber(stage.price)}" placeholder="卷軸單價" style="flex:1;">
+        <span style="font-size:12px;">卷軸價</span>
+        <input type="text" class="scroll-residual comma-input" value="${formatNumber(stage.residualSell)}" placeholder="成功後殘次售價" style="flex:1;">
+        <span style="font-size:12px;">殘次售價</span>
+        <button class="btn-sm btn-danger scroll-del-btn" data-sidx="${idx}">✕</button>
+      </div>
+    `).join('');
+
+    container.querySelectorAll('.scroll-rate, .scroll-price, .scroll-residual').forEach(input => {
+      input.oninput = function() {
+        const row = this.closest('.drop-item-row');
+        const sIdx = Number(row.getAttribute('data-sidx'));
+        scrollStages[sIdx].rate = parseNumber(row.querySelector('.scroll-rate').value) || 0;
+        scrollStages[sIdx].price = parseNumber(row.querySelector('.scroll-price').value);
+        scrollStages[sIdx].residualSell = parseNumber(row.querySelector('.scroll-residual').value);
+        calculateScrollCost();
+      };
+    });
+
+    container.querySelectorAll('.scroll-del-btn').forEach(btn => {
+      btn.onclick = function() {
+        const sIdx = Number(this.getAttribute('data-sidx'));
+        if (scrollStages.length <= 1) { alert('至少保留一個階段'); return; }
+        scrollStages.splice(sIdx, 1);
+        renderScrollStages();
+        calculateScrollCost();
+      };
+    });
+
+    bindCommaInputs();
+  }
+
+  document.getElementById('btnAddScrollStage').onclick = function() {
+    scrollStages.push({ rate: 30, price: 0, residualSell: 0 });
+    renderScrollStages();
+    calculateScrollCost();
+  };
+
+  function calculateScrollCost() {
+    const basePrice = parseNumber(document.getElementById('scrollBasePrice').value);
+    const baseNpcSell = parseNumber(document.getElementById('scrollBaseNpcSell').value);
+    const finalSell = parseNumber(document.getElementById('scrollFinalSell').value);
+
+    if (scrollStages.length === 0 || scrollStages.some(s => s.rate <= 0 || s.rate > 100)) {
+      document.getElementById('scrollNeedBase').innerText = '—';
+      document.getElementById('scrollTotalScrollCost').innerText = '—';
+      document.getElementById('scrollResidualIncome').innerText = '—';
+      document.getElementById('scrollNetCost').innerText = '—';
+      document.getElementById('scrollNetIncome3').innerText = '—';
+      document.getElementById('scrollProfit3').innerText = '—';
+      document.getElementById('scrollAdvice').innerText = '請設定正確的成功率 (1~100)';
+      return;
+    }
+
+    const rates = scrollStages.map(s => s.rate / 100);
+    const n = rates.length;
+
+    // 從後往前算：要得到 1 個最終成功，各階段需要多少次嘗試
+    let needEnter = new Array(n).fill(0);
+    needEnter[n - 1] = 1 / rates[n - 1];
+    for (let i = n - 2; i >= 0; i--) {
+      needEnter[i] = needEnter[i + 1] / rates[i];
+    }
+    const needBase = needEnter[0];
+
+    let totalScrollCost = 0;
+    let residualIncome = 0;
+
+    for (let i = 0; i < n; i++) {
+      const attempts = needEnter[i];
+      totalScrollCost += attempts * scrollStages[i].price;
+
+      // 失敗的數量
+      const fails = attempts * (1 - rates[i]);
+      if (i === 0) {
+        // 第一張失敗：賣基底 NPC 價
+        residualIncome += fails * baseNpcSell;
+      } else {
+        // 後續階段失敗：賣上一階段成功後的殘次售價
+        residualIncome += fails * (scrollStages[i - 1].residualSell || 0);
+      }
+    }
+
+    // 注意：最終成功的不賣殘次價，而是賣 finalSell
+    // 中間成功但沒繼續的已經在 fails 裡算過了
+
+    const totalCost = needBase * basePrice + totalScrollCost;
+    const netCost = totalCost - residualIncome; // 扣除殘次回收後的淨成本
+    const netIncome3 = Math.floor(finalSell * 0.97);
+    const profit3 = netIncome3 - netCost;
+
+    document.getElementById('scrollNeedBase').innerText = needBase.toFixed(2) + ' 件';
+    document.getElementById('scrollTotalScrollCost').innerText = formatNumber(Math.round(totalScrollCost)) + ' 楓幣';
+    document.getElementById('scrollResidualIncome').innerText = formatNumber(Math.round(residualIncome)) + ' 楓幣';
+    document.getElementById('scrollNetCost').innerText = formatNumber(Math.round(netCost)) + ' 楓幣';
+    document.getElementById('scrollNetIncome3').innerText = formatNumber(netIncome3) + ' 楓幣';
+    document.getElementById('scrollProfit3').innerText = formatNumber(Math.round(profit3)) + ' 楓幣';
+
+    const advice = document.getElementById('scrollAdvice');
+    const profitEl = document.getElementById('scrollProfit3');
+    if (profit3 > 0 && finalSell > 0) {
+      profitEl.style.color = '#28a745';
+      advice.innerText = `✅ 預估獲利！純利潤率約 ${((profit3 / finalSell) * 100).toFixed(1)}%`;
+      advice.style.color = '#28a745';
+    } else if (profit3 < 0) {
+      profitEl.style.color = '#dc3545';
+      advice.innerText = `⚠ 預估虧損 ${formatNumber(Math.abs(Math.round(profit3)))} 楓幣`;
+      advice.style.color = '#dc3545';
+    } else {
+      profitEl.style.color = '#6c757d';
+      advice.innerText = '➖ 大約打平';
+      advice.style.color = '#6c757d';
+    }
+  }
+
+  // 綁定基底與最終售價的即時計算
+  ['scrollBasePrice', 'scrollBaseNpcSell', 'scrollFinalSell'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.oninput = calculateScrollCost;
+    }
+  });
+
+  // 初始化卷軸階段
+  renderScrollStages();
+  calculateScrollCost();
 
   function refreshUI() {
     renderMarketGrid();
