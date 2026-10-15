@@ -1803,14 +1803,21 @@ window.addEventListener('load', function() {
       const attempts = needEnter[i];
       totalScrollCost += attempts * scrollStages[i].price;
 
-      // 失敗的數量
       const fails = attempts * (1 - rates[i]);
-      if (i === 0) {
-        // 第一張失敗：賣基底 NPC 價
-        residualIncome += fails * baseNpcSell;
+      if (isGroup) {
+        // 分組模式：沒達到目標的殘次品，賣該組設定的殘次售價
+        // 期望失敗組數 ≈ attempts * (1 - p^slots) 或簡化用 fails 比例
+        const residualPrice = scrollStages[i].residualSell || 0;
+        if (residualPrice > 0) {
+          // 粗估：每次嘗試失敗時可回收的殘次收入
+          residualIncome += fails * residualPrice;
+        }
       } else {
-        // 後續階段失敗：賣上一階段成功後的殘次售價
-        residualIncome += fails * (scrollStages[i - 1].residualSell || 0);
+        if (i === 0) {
+          residualIncome += fails * baseNpcSell;
+        } else {
+          residualIncome += fails * (scrollStages[i - 1].residualSell || 0);
+        }
       }
     }
 
