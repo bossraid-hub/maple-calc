@@ -50,32 +50,26 @@
 
     .side-gallery {
       position: fixed;
-      top: 50%;
-      transform: translateY(-50%);
-      width: 220px;
-      height: 450px;
-      background: rgba(0, 0, 0, 0.6);
-      border: 2px solid rgba(255, 255, 255, 0.2);
-      border-radius: 12px;
+      top: 0;
+      height: 100vh;
+      width: 280px;
+      background: #000;
       overflow: hidden;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      z-index: 1;
       display: flex;
-      flex-direction: column;
       align-items: center;
       justify-content: center;
-      backdrop-filter: blur(5px);
-      z-index: 10;
     }
-    .side-left { left: 25px; }
-    .side-right { right: 25px; }
+    .side-left { left: 0; }
+    .side-right { right: 0; }
     .side-gallery img {
-      max-width: 100%;
-      max-height: 100%;
-      object-fit: contain;
-      transition: opacity 0.6s ease-in-out;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center;
     }
 
-    @media (max-width: 1350px) {
+    @media (max-width: 1200px) {
       .side-gallery { display: none; }
     }
 
@@ -554,6 +548,25 @@
       </div>
       <div style="font-weight:bold; margin-top:10px;">目前橫版相冊清單：</div>
       <div class="bg-thumbs" id="bannerThumbsContainer"></div>
+    </div>
+
+    <div class="section-title">🖼️ 左右滿版背景（適合手機比例圖）</div>
+    <div class="bg-setting-panel">
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px;">
+        <div>
+          <label style="font-weight:bold; display:block; margin-bottom:6px;">左側圖片</label>
+          <input type="file" id="leftSideFile" accept="image/*" style="width:100%; margin-bottom:6px;">
+          <input type="text" id="leftSideUrl" placeholder="或貼網址" style="width:100%; margin-bottom:6px;">
+          <button class="btn-sm btn-secondary" id="btnSetLeft">套用左側</button>
+        </div>
+        <div>
+          <label style="font-weight:bold; display:block; margin-bottom:6px;">右側圖片</label>
+          <input type="file" id="rightSideFile" accept="image/*" style="width:100%; margin-bottom:6px;">
+          <input type="text" id="rightSideUrl" placeholder="或貼網址" style="width:100%; margin-bottom:6px;">
+          <button class="btn-sm btn-secondary" id="btnSetRight">套用右側</button>
+        </div>
+      </div>
+      <div style="font-size:12px; color:#666; margin-top:8px;">建議使用手機直式比例圖片，會自動滿版左右兩邊。</div>
     </div>
 
     <div class="section-title">🖼️ 3. 全頁大背景圖片</div>
@@ -1923,8 +1936,44 @@ window.addEventListener('load', function() {
   updateFinalSellLabel();
   calculateScrollCost();
 
+  // 左右滿版背景
+  function setSideImage(side, url) {
+    const img = document.getElementById(side === 'left' ? 'leftGalleryImg' : 'rightGalleryImg');
+    if (img && url) img.src = url;
+    localStorage.setItem('maple_side_' + side, url || '');
+  }
+
+  document.getElementById('leftSideFile').onchange = function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => { setSideImage('left', ev.target.result); e.target.value = ''; };
+    reader.readAsDataURL(file);
+  };
+  document.getElementById('rightSideFile').onchange = function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => { setSideImage('right', ev.target.result); e.target.value = ''; };
+    reader.readAsDataURL(file);
+  };
+  document.getElementById('btnSetLeft').onclick = function() {
+    const url = document.getElementById('leftSideUrl').value.trim();
+    if (url) setSideImage('left', url);
+  };
+  document.getElementById('btnSetRight').onclick = function() {
+    const url = document.getElementById('rightSideUrl').value.trim();
+    if (url) setSideImage('right', url);
+  };
+
+  // 載入已儲存的左右圖
+  const savedLeft = localStorage.getItem('maple_side_left');
+  const savedRight = localStorage.getItem('maple_side_right');
+  if (savedLeft) setSideImage('left', savedLeft);
+  if (savedRight) setSideImage('right', savedRight);
+
   // ========== 設定頁管理員密碼 ==========
-  const SETTINGS_PASSWORD = "0225"; // 可自行修改
+  const SETTINGS_PASSWORD = "maple123"; // 可自行修改
   document.getElementById('btnSettingsLogin').onclick = function() {
     const pwd = document.getElementById('settingsPassword').value;
     if (pwd === SETTINGS_PASSWORD) {
