@@ -2493,7 +2493,14 @@ function applySpeedPreset() {
     const defense = Math.floor(rawDefense * (1 - defReducePct / 100));
 
     const maxRange = Math.floor((primary * maxC + secondary) * attack / 100 * rangeAmp);
-    const minRange = Math.floor((primary * minC * 0.9 * mastery + secondary) * attack / 100 * rangeAmp);
+    let minRange = Math.floor((primary * minC * 0.9 * mastery + secondary) * attack / 100 * rangeAmp);
+
+    // 槍連擊特殊：表攻小傷 ×1.6
+    const skillPreset = document.getElementById('dpmSkillPreset');
+    const isQiangLian = skillPreset && skillPreset.value.startsWith('170|3');
+    if (isQiangLian) {
+      minRange = Math.floor(minRange * 1.6);
+    }
 
     let maxBase = maxRange * skillPct * finalDmg;
     let minBase = minRange * skillPct * finalDmg;
