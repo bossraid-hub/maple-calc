@@ -644,16 +644,21 @@
       </div>
       <div class="exp-field" style="grid-column: 1 / -1;">
         <label>終傷 / 表攻增傷來源（可多選疊加，或手動填最終%）</label>
-        <select id="dpmFinalPreset" multiple size="6" style="height:auto;">
+        <select id="dpmFinalPreset" multiple size="7" style="height:auto;">
           <option value="100">無額外終傷 (100%)</option>
-          <option value="110">楓祝 20 / 部分 BUFF (約 110%)</option>
-          <option value="120">元素附魔 / 火剋等 (120%)</option>
-          <option value="125">雷屬性附魔 (125%)</option>
-          <option value="110">魔防消除 (110%)</option>
-          <option value="150">黑暗力量 / 鬥氣集中類 (約 150%，請依實際調整)</option>
-          <option value="200">高倍率爆發狀態 (200%，僅示範)</option>
+          <option value="120">元素附魔 冰 / 火 (120%)</option>
+          <option value="125">元素附魔 雷 (125%)</option>
+          <option value="140">元素附魔 聖 (140%)</option>
+          <option value="210">黑暗力量 (210%)</option>
+          <option value="220">鬥氣集中 (220%)</option>
         </select>
-        <div style="font-size:12px; color:#666; margin-top:4px;">按住 Ctrl / Cmd 可多選，會相乘後帶入下方「最終增傷率」。</div>
+        <div style="margin-top:8px;">
+          <label style="font-weight:normal; cursor:pointer;">
+            <input type="checkbox" id="dpmWeakness" style="width:auto; margin-right:6px;">
+            剋屬（再乘 150%）
+          </label>
+        </div>
+        <div style="font-size:12px; color:#666; margin-top:4px;">可多選疊加；勾選剋屬後會再乘 150%。</div>
       </div>
       <div class="exp-field">
         <label>最終增傷率 (%)</label>
@@ -679,6 +684,16 @@
       <div class="exp-field">
         <label>怪物防禦</label>
         <input type="number" id="dpmDefense" value="1200">
+      </div>
+      <div class="exp-field">
+        <label>扣防禦技能</label>
+        <select id="dpmDefReduce">
+          <option value="0">無 (0%)</option>
+          <option value="30">30%</option>
+          <option value="20">20%</option>
+          <option value="10">10%</option>
+          <option value="5">5%</option>
+        </select>
       </div>
       <div class="exp-field" style="grid-column: 1 / -1;">
         <label>技能（依 Ayumilove 攻速表自動帶入延遲）</label>
@@ -2446,11 +2461,13 @@ function applySpeedPreset() {
   function applyFinalPreset() {
     const sel = document.getElementById('dpmFinalPreset');
     const out = document.getElementById('dpmFinalDmg');
+    const weak = document.getElementById('dpmWeakness');
     if (!sel || !out) return;
     let mult = 1;
     for (const opt of sel.selectedOptions) {
       mult *= Number(opt.value) / 100;
     }
+    if (weak && weak.checked) mult *= 1.5;
     out.value = Math.round(mult * 100);
   }
 
@@ -2475,7 +2492,9 @@ function applySpeedPreset() {
     const critDmg = (Number(document.getElementById('dpmCritDmg')?.value) || 0) / 100;
     const finalDmg = (Number(document.getElementById('dpmFinalDmg')?.value) || 100) / 100;
     const rangeAmp = (Number(document.getElementById('dpmRangeAmp')?.value) || 100) / 100;
-    const defense = Number(document.getElementById('dpmDefense')?.value) || 0;
+    const rawDefense = Number(document.getElementById('dpmDefense')?.value) || 0;
+    const defReducePct = Number(document.getElementById('dpmDefReduce')?.value) || 0;
+    const defense = Math.floor(rawDefense * (1 - defReducePct / 100));
 
     const maxRange = Math.floor((primary * maxC + secondary) * attack / 100 * rangeAmp);
     const minRange = Math.floor((primary * minC * 0.9 * mastery + secondary) * attack / 100 * rangeAmp);
@@ -2520,6 +2539,8 @@ function applySpeedPreset() {
     if (speedStage) speedStage.addEventListener('change', () => { applySkillSpeed(); calcDPM(); });
     const finalPreset = document.getElementById('dpmFinalPreset');
     if (finalPreset) finalPreset.addEventListener('change', () => { applyFinalPreset(); calcDPM(); });
+    const weakness = document.getElementById('dpmWeakness');
+    if (weakness) weakness.addEventListener('change', () => { applyFinalPreset(); calcDPM(); });
 
     document.querySelectorAll('#tabContent-dpm input, #tabContent-dpm select').forEach(el => {
       el.addEventListener('input', calcDPM);
