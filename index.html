@@ -547,14 +547,7 @@
     <!-- 基礎屬性 -->
     <div class="section-title"><span>角色與目標</span></div>
     <div class="exp-grid">
-      <div class="exp-field">
-        <label>角色等級</label>
-        <input type="number" id="dpmCharLv" value="200">
-      </div>
-      <div class="exp-field">
-        <label>野王 / 怪物等級</label>
-        <input type="number" id="dpmMobLv" value="100">
-      </div>
+
       <div class="exp-field">
         <label>力量 (STR)</label>
         <input type="number" id="dpmStr" value="1210">
@@ -587,28 +580,28 @@
       <div class="exp-field" style="grid-column: 1 / -1;">
         <label>武器類型</label>
         <select id="dpmWeapon">
-          <option value="4.2,4.2,str">單手劍 (4.2 / 4.2) · 主屬力</option>
-          <option value="4.8,4.8,str">雙手劍 (4.8 / 4.8) · 主屬力</option>
-          <option value="4.8,3.6,str">單手斧 / 棍 (4.8 / 3.6) · 主屬力</option>
-          <option value="5.2,4.0,str">雙手斧 / 棍 (5.2 / 4.0) · 主屬力</option>
-          <option value="5.2,3.5,str">矛 (5.2 / 3.5) · 主屬力</option>
-          <option value="5.1,3.6,str">槍 (5.1 / 3.6) · 主屬力</option>
-          <option value="3.6,3.6,luk">拳套 (3.6 / 3.6) · 主屬幸</option>
-          <option value="3.4,3.4,dex">弓 (3.4 / 3.4) · 主屬敏</option>
-          <option value="3.6,3.6,dex">弩 (3.6 / 3.6) · 主屬敏</option>
-          <option value="4.8,4.8,str">指虎 (4.8 / 4.8) · 主屬力</option>
-          <option value="3.6,3.6,dex">火槍 (3.6 / 3.6) · 主屬敏</option>
-          <option value="2.5,2.5,str">召喚物 (2.5 / 2.5)</option>
-          <option value="5.25,5.25,luk">雙飛斬 (5.25) · 主屬幸</option>
-          <option value="5.26,5.26,luk">三飛閃 (5.26) · 主屬幸</option>
+          <option value="4.2,4.2,str,dex">單手劍 (4.2 / 4.2) · 主力副敏</option>
+          <option value="4.8,4.8,str,dex">雙手劍 (4.8 / 4.8) · 主力副敏</option>
+          <option value="4.8,3.6,str,dex">單手斧 / 棍 (4.8 / 3.6) · 主力副敏</option>
+          <option value="5.2,4.0,str,dex">雙手斧 / 棍 (5.2 / 4.0) · 主力副敏</option>
+          <option value="5.2,3.5,str,dex">矛 (5.2 / 3.5) · 主力副敏</option>
+          <option value="5.1,3.6,str,dex">槍 (5.1 / 3.6) · 主力副敏</option>
+          <option value="4.8,4.8,str,dex">指虎 (4.8 / 4.8) · 主力副敏</option>
+          <option value="3.4,3.4,dex,str">弓 (3.4 / 3.4) · 主敏副力</option>
+          <option value="3.6,3.6,dex,str">弩 (3.6 / 3.6) · 主敏副力</option>
+          <option value="3.6,3.6,dex,str">火槍 (3.6 / 3.6) · 主敏副力</option>
+          <option value="4.2,3.6,luk,dex">短劍 (4.2 / 3.6) · 主幸副敏</option>
+          <option value="3.6,3.6,luk,dex">拳套 (3.6 / 3.6) · 主幸副敏</option>
+          <option value="5.25,5.25,luk,dex">雙飛斬 (5.25) · 主幸副敏</option>
+          <option value="5.26,5.26,luk,dex">三飛閃 (5.26) · 主幸副敏</option>
         </select>
       </div>
       <div class="exp-field">
-        <label>武器 / 召喚物攻擊</label>
+        <label>武器/手套攻擊力</label>
         <input type="number" id="dpmWeaponAtt" value="149">
       </div>
       <div class="exp-field">
-        <label>手套 / 藥水 / 其他 +攻</label>
+        <label>藥水/技能 攻擊力</label>
         <input type="number" id="dpmExtraAtt" value="0">
       </div>
       <div class="exp-field">
@@ -627,10 +620,11 @@
       <div class="exp-field" style="grid-column: 1 / -1;">
         <label>技能名稱 / 常用技能</label>
         <select id="dpmSkillPreset">
-          <option value="100">普攻 / 無 (100%)</option>
-          <option value="750">無雙劍舞 / 騎士衝擊波 (750%)</option>
-          <option value="170">槍連擊 (170% ×3 段，請自行乘)</option>
-          <option value="3334">十字軍常用循環估算 (3334%)</option>
+          <option value="100|1">無 (100% ×1)</option>
+          <option value="750|1">無雙劍舞 / 騎士衝擊波 (750% ×1)</option>
+          <option value="170|3">槍連擊 (170% ×3)</option>
+          <option value="250|1">雙飛斬 (250% ×1)</option>
+          <option value="250|1">三飛閃 (250% ×1)</option>
           <option value="custom">自訂（手動填下方）</option>
         </select>
       </div>
@@ -2318,8 +2312,7 @@ window.addEventListener('load', function() {
   
   // 技能延遲表（可自行刪除）
   const DEFAULT_SKILLS = {
-    "普攻": {2:600, 3:660, 4:720, 5:750, 6:810},
-    "無雙劍舞": {2:600, 3:660, 4:720, 5:750, 6:810},
+        "無雙劍舞": {2:600, 3:660, 4:720, 5:750, 6:810},
     "騎士衝擊波": {2:600, 3:660, 4:720, 5:750, 6:810},
     "槍/矛無雙": {2:600, 3:660, 4:720, 5:750, 6:810},
     "槍連擊": {2:630, 3:690, 4:750, 5:810, 6:870},
@@ -2330,14 +2323,14 @@ window.addEventListener('load', function() {
     "三飛閃": {2:600, 3:660, 4:720, 5:750, 6:810},
     "風魔手裏劍": {2:600, 3:660, 4:720, 5:750, 6:810},
     "四連箭": {2:600, 3:660, 4:720, 5:750, 6:810},
-    "暴風箭雨（每箭）": {2:120, 3:120, 4:120, 5:120, 6:120},
+    "暴風神射（每箭）": {2:120, 3:120, 4:120, 5:120, 6:120},
     "迅雷（每發）": {2:120, 3:120, 4:120, 5:120, 6:120},
     "加農砲": {2:600, 3:630, 4:690, 5:750, 6:780},
     "閃爆破": {2:450, 3:510, 4:540, 5:570, 6:600},
     "昇龍拳": {2:900, 3:960, 4:1050, 5:1110, 6:1170},
     "吸血術": {2:1020, 3:1110, 4:1200, 5:1290, 6:1350},
     "楓炸": {2:750, 3:840, 4:900, 5:960, 6:1020},
-    "致命攻擊": {2:1380, 3:1500, 4:1620, 5:1710, 6:1800},
+    "致命暗殺": {2:1380, 3:1500, 4:1620, 5:1710, 6:1800},
     "召喚物": {2:3000, 3:3000, 4:3000, 5:3000, 6:3000},
     "砲台章魚": {2:1579, 3:1579, 4:1579, 5:1579, 6:1579},
     "自訂": null
@@ -2428,20 +2421,19 @@ function applySpeedPreset() {
     if (!weapon) return;
     const parts = weapon.value.split(',');
     const mainStat = parts[2] || 'str';
+    const secStat = parts[3] || 'dex';
     const str = Number(document.getElementById('dpmStr')?.value) || 0;
     const dex = Number(document.getElementById('dpmDex')?.value) || 0;
     const luk = Number(document.getElementById('dpmLuk')?.value) || 0;
-    let primary = str;
-    if (mainStat === 'dex') primary = dex;
-    else if (mainStat === 'luk') primary = luk;
+
+    const statMap = { str: str, dex: dex, luk: luk };
+    const primary = statMap[mainStat] || str;
+    const secondary = statMap[secStat] || dex;
+
     const primaryInput = document.getElementById('dpmPrimary');
     if (primaryInput && !primaryInput.dataset.manual) primaryInput.value = primary;
     const secInput = document.getElementById('dpmSecondary');
-    if (secInput && !secInput.dataset.manual) {
-      // 簡單副屬：非主屬中較大的一個（可再精修）
-      const others = [str, dex, luk].filter(v => v !== primary);
-      secInput.value = Math.max(...others, 0);
-    }
+    if (secInput && !secInput.dataset.manual) secInput.value = secondary;
   }
 
   function updateTotalAtt() {
@@ -2454,8 +2446,12 @@ function applySpeedPreset() {
   function applySkillPreset() {
     const sel = document.getElementById('dpmSkillPreset');
     const skill = document.getElementById('dpmSkill');
+    const hits = document.getElementById('dpmSkillHits');
     if (!sel || !skill) return;
-    if (sel.value !== 'custom') skill.value = sel.value;
+    if (sel.value === 'custom') return;
+    const [pct, hitCount] = sel.value.split('|');
+    skill.value = pct || 100;
+    if (hits && hitCount) hits.value = hitCount;
   }
 
   function applyFinalPreset() {
