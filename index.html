@@ -539,9 +539,9 @@
 
   <!-- DPM 傷害計算機分頁 -->
   <div id="tabContent-dpm" class="tab-content">
-    <div class="section-title"><span>⚔️ DPM 傷害計算機（對齊 Philip 試算表風格）</span></div>
+    <div class="section-title"><span>⚔️ DPM 傷害計算機</span></div>
     <div style="font-size:13px; color:#555; margin-bottom:12px; background:rgba(255,255,255,0.75); padding:8px 12px; border-radius:6px; border:1px dashed #ccc;">
-      欄位與試算表大致對應。終傷與技能用下拉快速帶入常見倍率，也可手動覆寫。結果僅供參考。
+      結果僅供參考。
     </div>
 
     <!-- 基礎屬性 -->
@@ -682,21 +682,11 @@
       </div>
       <div class="exp-field" style="grid-column: 1 / -1;">
         <label>技能（依 Ayumilove 攻速表自動帶入延遲）</label>
-        <select id="dpmSkillSpeed">
-          <option value="normal">普攻</option>
-          <option value="wushuang">無雙劍舞 / 騎士衝擊波</option>
-          <option value="qiang_mao">槍/矛無雙</option>
-          <option value="qiang_lian">槍連擊</option>
-          <option value="longpao">龍咆 / 鬼神</option>
-          <option value="shuangfei">雙飛斬</option>
-          <option value="sanfei">三飛閃</option>
-          <option value="fengmo">風魔手裏劍</option>
-          <option value="silian">四連箭</option>
-          <option value="hurricane">暴風箭雨（每箭）</option>
-          <option value="xunlei">迅雷（每發）</option>
-          <option value="summon">召喚物</option>
-          <option value="custom">自訂（手動填 ms）</option>
-        </select>
+        <select id="dpmSkillSpeed"></select>
+        <div style="margin-top:6px; display:flex; gap:6px; align-items:center;">
+          <button type="button" class="btn-sm btn-danger" id="btnDelSkill" style="padding:4px 10px; font-size:12px;">刪除目前選中技能</button>
+          <span style="font-size:12px; color:#666;">（刪除後會記住，重新整理仍有效）</span>
+        </div>
       </div>
       <div class="exp-field">
         <label>攻速檔位</label>
@@ -2311,8 +2301,70 @@ window.addEventListener('load', function() {
   // ========== DPM 傷害計算機 ==========
 
   
-  // 技能在不同攻速檔位的 ms（參考 Ayumilove Attack Speed Reference）
-  const SKILL_DELAY = {
+  // 技能延遲表（可自行刪除）
+  const DEFAULT_SKILLS = {
+    "普攻": {2:600, 3:660, 4:720, 5:750, 6:810},
+    "無雙劍舞": {2:600, 3:660, 4:720, 5:750, 6:810},
+    "騎士衝擊波": {2:600, 3:660, 4:720, 5:750, 6:810},
+    "槍/矛無雙": {2:600, 3:660, 4:720, 5:750, 6:810},
+    "槍連擊": {2:630, 3:690, 4:750, 5:810, 6:870},
+    "矛無雙": {2:600, 3:660, 4:720, 5:750, 6:810},
+    "龍咆哮": {2:600, 3:660, 4:720, 5:750, 6:810},
+    "鬼神": {2:600, 3:660, 4:720, 5:750, 6:810},
+    "雙飛斬": {2:600, 3:660, 4:720, 5:750, 6:810},
+    "三飛閃": {2:600, 3:660, 4:720, 5:750, 6:810},
+    "風魔手裏劍": {2:600, 3:660, 4:720, 5:750, 6:810},
+    "四連箭": {2:600, 3:660, 4:720, 5:750, 6:810},
+    "暴風箭雨（每箭）": {2:120, 3:120, 4:120, 5:120, 6:120},
+    "迅雷（每發）": {2:120, 3:120, 4:120, 5:120, 6:120},
+    "加農砲": {2:600, 3:630, 4:690, 5:750, 6:780},
+    "閃爆破": {2:450, 3:510, 4:540, 5:570, 6:600},
+    "昇龍拳": {2:900, 3:960, 4:1050, 5:1110, 6:1170},
+    "吸血術": {2:1020, 3:1110, 4:1200, 5:1290, 6:1350},
+    "楓炸": {2:750, 3:840, 4:900, 5:960, 6:1020},
+    "致命攻擊": {2:1380, 3:1500, 4:1620, 5:1710, 6:1800},
+    "召喚物": {2:3000, 3:3000, 4:3000, 5:3000, 6:3000},
+    "砲台章魚": {2:1579, 3:1579, 4:1579, 5:1579, 6:1579},
+    "自訂": null
+  };
+
+  let SKILL_DELAY = JSON.parse(localStorage.getItem('dpm_skills')) || JSON.parse(JSON.stringify(DEFAULT_SKILLS));
+
+  function saveSkills() {
+    localStorage.setItem('dpm_skills', JSON.stringify(SKILL_DELAY));
+  }
+
+  function renderSkillSelect() {
+    const sel = document.getElementById('dpmSkillSpeed');
+    if (!sel) return;
+    const current = sel.value;
+    sel.innerHTML = '';
+    Object.keys(SKILL_DELAY).forEach(name => {
+      const opt = document.createElement('option');
+      opt.value = name;
+      opt.textContent = name;
+      sel.appendChild(opt);
+    });
+    if (current && SKILL_DELAY[current]) sel.value = current;
+    else sel.value = Object.keys(SKILL_DELAY)[0] || '';
+  }
+
+  function deleteCurrentSkill() {
+    const sel = document.getElementById('dpmSkillSpeed');
+    if (!sel || !sel.value) return;
+    const name = sel.value;
+    if (name === '自訂') { alert('自訂項目不可刪除'); return; }
+    if (confirm('確定刪除「' + name + '」嗎？')) {
+      delete SKILL_DELAY[name];
+      saveSkills();
+      renderSkillSelect();
+      applySkillSpeed();
+      calcDPM();
+    }
+  }
+
+  // 舊版相容用（保留空物件避免報錯）
+  const _unused = {
     normal:       {2:600, 3:660, 4:720, 5:750, 6:810},
     wushuang:     {2:600, 3:660, 4:720, 5:750, 6:810}, // 近似一般技能
     power:        {2:570, 3:630, 4:660, 5:720, 6:750},
@@ -2337,14 +2389,14 @@ window.addEventListener('load', function() {
 
     const skill = skillSel.value;
     const stage = stageSel.value;
-    if (skill === 'custom' || !SKILL_DELAY[skill]) {
+    if (skill === '自訂' || !SKILL_DELAY[skill]) {
       msInput.readOnly = false;
       msInput.style.background = '#fff';
       return;
     }
     msInput.readOnly = true;
     msInput.style.background = '#f0f0f0';
-    const ms = SKILL_DELAY[skill][stage] || 650;
+    const ms = (SKILL_DELAY[skill] && SKILL_DELAY[skill][stage]) || 650;
     msInput.value = ms;
   }
 function applySpeedPreset() {
@@ -2458,6 +2510,10 @@ function applySpeedPreset() {
   setTimeout(() => {
     const skillPreset = document.getElementById('dpmSkillPreset');
     if (skillPreset) skillPreset.addEventListener('change', () => { applySkillPreset(); calcDPM(); });
+    renderSkillSelect();
+    const delBtn = document.getElementById('btnDelSkill');
+    if (delBtn) delBtn.onclick = deleteCurrentSkill;
+
     const skillSpeed = document.getElementById('dpmSkillSpeed');
     const speedStage = document.getElementById('dpmSpeedStage');
     if (skillSpeed) skillSpeed.addEventListener('change', () => { applySkillSpeed(); calcDPM(); });
