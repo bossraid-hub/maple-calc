@@ -303,7 +303,6 @@
     <button class="tab-btn" data-tab="tabContent-scroll">📜 衝卷成本計算</button>
     <button class="tab-btn" data-tab="tabContent-manage">📜 管理成品</button>
     <button class="tab-btn" data-tab="tabContent-add">➕ 新增成品配方</button>
-    <button class="tab-btn" data-tab="tabContent-dpm">⚔️ DPM 傷害計算機</button>
     <button class="tab-btn" data-tab="tabContent-settings" id="btnTabSettings">⚙️ 設定</button>
   </div>
 
@@ -454,6 +453,31 @@
       <div class="result-row profit"><span>🚀 平均每 1 小時經驗值：</span><span id="resExp1h" style="color:#1f497d;">0</span></div>
       <div class="result-row profit"><span>💰 平均每 1 小時楓幣淨收益：</span><span id="resMesos1h" style="color:#c55a11;">0 楓幣</span></div>
     </div>
+
+    <div class="section-title" style="margin-top:25px;"><span>📊 Artale 升級經驗計算（資料來源：mapleartale.com）</span></div>
+    <div style="font-size:12px; color:#555; margin-bottom:12px; background:rgba(255,255,255,0.75); padding:8px 12px; border-radius:6px; border:1px dashed #ccc;">
+      💡 輸入目前等級與目前經驗，系統會根據 Artale 經驗表計算距離下一級還差多少，並用你測到的每小時經驗估算時間。
+    </div>
+    <div class="exp-grid">
+      <div class="exp-field">
+        <label>目前等級：</label>
+        <input type="number" id="artaleLevel" value="1" min="1" max="200" style="font-weight:bold;">
+      </div>
+      <div class="exp-field">
+        <label>目前經驗值：</label>
+        <input type="text" id="artaleExp" class="comma-input" value="0" placeholder="例如：50000">
+      </div>
+      <div class="exp-field">
+        <label>目標等級（選填）：</label>
+        <input type="number" id="artaleTargetLevel" value="" min="2" max="200" placeholder="例如：50">
+      </div>
+    </div>
+    <div class="card-result" id="artaleResult">
+      <div class="result-row"><span>升到下一級還需經驗：</span><span id="artaleNeedNext" style="font-weight:bold; color:#1f497d;">-</span></div>
+      <div class="result-row"><span>依目前效率，升下一級約需：</span><span id="artaleTimeNext" style="font-weight:bold;">-</span></div>
+      <div class="result-row"><span>升到目標等級還需總經驗：</span><span id="artaleNeedTarget" style="font-weight:bold; color:#c55a11;">-</span></div>
+      <div class="result-row"><span>依目前效率，升到目標約需：</span><span id="artaleTimeTarget" style="font-weight:bold;">-</span></div>
+    </div>
   </div>
 
   <!-- 卷軸金字塔衝卷成本計算機 (本地運算) -->
@@ -536,204 +560,7 @@
     </div>
   </div>
 
-
-  <!-- DPM 傷害計算機分頁 -->
-  <div id="tabContent-dpm" class="tab-content">
-    <div class="section-title"><span>⚔️ DPM 傷害計算機</span></div>
-    <div style="font-size:13px; color:#555; margin-bottom:12px; background:rgba(255,255,255,0.75); padding:8px 12px; border-radius:6px; border:1px dashed #ccc;">
-      結果僅供參考。
-    </div>
-
-    <!-- 基礎屬性 -->
-    <div class="section-title"><span>角色與目標</span></div>
-    <div class="exp-grid">
-
-      <div class="exp-field">
-        <label>力量 (STR)</label>
-        <input type="number" id="dpmStr" value="1210">
-      </div>
-      <div class="exp-field">
-        <label>敏捷 (DEX)</label>
-        <input type="number" id="dpmDex" value="91">
-      </div>
-      <div class="exp-field">
-        <label>智力 (INT)</label>
-        <input type="number" id="dpmInt" value="4">
-      </div>
-      <div class="exp-field">
-        <label>幸運 (LUK)</label>
-        <input type="number" id="dpmLuk" value="1160">
-      </div>
-      <div class="exp-field">
-        <label>主屬性（自動依武器判斷，可手動覆寫）</label>
-        <input type="number" id="dpmPrimary" value="1210">
-      </div>
-      <div class="exp-field">
-        <label>副屬性</label>
-        <input type="number" id="dpmSecondary" value="91">
-      </div>
-    </div>
-
-    <!-- 武器與攻擊 -->
-    <div class="section-title"><span>武器 / 攻擊力 / 熟練度</span></div>
-    <div class="exp-grid">
-      <div class="exp-field" style="grid-column: 1 / -1;">
-        <label>武器類型</label>
-        <select id="dpmWeapon">
-          <option value="4.2,4.2,str,dex">單手劍 (4.2 / 4.2) · 主力副敏</option>
-          <option value="4.8,4.8,str,dex">雙手劍 (4.8 / 4.8) · 主力副敏</option>
-          <option value="4.8,3.6,str,dex">單手斧 / 棍 (4.8 / 3.6) · 主力副敏</option>
-          <option value="5.2,4.0,str,dex">雙手斧 / 棍 (5.2 / 4.0) · 主力副敏</option>
-          <option value="5.2,3.5,str,dex">矛 (5.2 / 3.5) · 主力副敏</option>
-          <option value="5.1,3.6,str,dex">槍 (5.1 / 3.6) · 主力副敏</option>
-          <option value="4.8,4.8,str,dex">指虎 (4.8 / 4.8) · 主力副敏</option>
-          <option value="3.4,3.4,dex,str">弓 (3.4 / 3.4) · 主敏副力</option>
-          <option value="3.6,3.6,dex,str">弩 (3.6 / 3.6) · 主敏副力</option>
-          <option value="3.6,3.6,dex,str">火槍 (3.6 / 3.6) · 主敏副力</option>
-          <option value="4.2,3.6,luk,dex">短劍 (4.2 / 3.6) · 主幸副敏</option>
-          <option value="3.6,3.6,luk,dex">拳套 (3.6 / 3.6) · 主幸副敏</option>
-          <option value="5.25,5.25,luk,dex">雙飛斬 (5.25) · 主幸副敏</option>
-          <option value="5.26,5.26,luk,dex">三飛閃 (5.26) · 主幸副敏</option>
-        </select>
-      </div>
-      <div class="exp-field">
-        <label>武器/手套攻擊力</label>
-        <input type="number" id="dpmWeaponAtt" value="149">
-      </div>
-      <div class="exp-field">
-        <label>藥水/技能 攻擊力</label>
-        <input type="number" id="dpmExtraAtt" value="0">
-      </div>
-      <div class="exp-field">
-        <label>熟練度 (%)</label>
-        <input type="number" id="dpmMastery" value="60">
-      </div>
-      <div class="exp-field">
-        <label>W.ATT（總攻擊）</label>
-        <input type="number" id="dpmTotalAtt" value="149" readonly style="background:#f0f0f0;">
-      </div>
-    </div>
-
-    <!-- 技能與終傷下拉 -->
-    <div class="section-title"><span>技能倍率與終傷來源（下拉快速帶入）</span></div>
-    <div class="exp-grid">
-      <div class="exp-field" style="grid-column: 1 / -1;">
-        <label>技能名稱 / 常用技能</label>
-        <select id="dpmSkillPreset">
-          <option value="100|1">無 (100% ×1)</option>
-          <option value="750|1">無雙劍舞 / 騎士衝擊波 (750% ×1)</option>
-          <option value="170|3">槍連擊 (170% ×3)</option>
-          <option value="250|1">雙飛斬 (250% ×1)</option>
-          <option value="250|1">三飛閃 (250% ×1)</option>
-          <option value="custom">自訂（手動填下方）</option>
-        </select>
-      </div>
-      <div class="exp-field">
-        <label>單段技能 (%)</label>
-        <input type="number" id="dpmSkill" value="750">
-      </div>
-      <div class="exp-field">
-        <label>技能段數</label>
-        <input type="number" id="dpmSkillHits" value="1" min="1">
-      </div>
-      <div class="exp-field" style="grid-column: 1 / -1;">
-        <label>終傷 / 表攻增傷來源（可多選疊加，或手動填最終%）</label>
-        <select id="dpmFinalPreset" multiple size="7" style="height:auto;">
-          <option value="100">無額外終傷 (100%)</option>
-          <option value="120">元素附魔 冰 / 火 (120%)</option>
-          <option value="125">元素附魔 雷 (125%)</option>
-          <option value="140">元素附魔 聖 (140%)</option>
-          <option value="210">黑暗力量 (210%)</option>
-          <option value="220">鬥氣集中 (220%)</option>
-        </select>
-        <div style="margin-top:8px;">
-          <label style="font-weight:normal; cursor:pointer;">
-            <input type="checkbox" id="dpmWeakness" style="width:auto; margin-right:6px;">
-            剋屬（再乘 150%）
-          </label>
-        </div>
-        <div style="font-size:12px; color:#666; margin-top:4px;">可多選疊加；勾選剋屬後會再乘 150%。</div>
-      </div>
-      <div class="exp-field">
-        <label>最終增傷率 (%)</label>
-        <input type="number" id="dpmFinalDmg" value="100">
-      </div>
-      <div class="exp-field">
-        <label>表攻增傷率 (%)</label>
-        <input type="number" id="dpmRangeAmp" value="100">
-      </div>
-    </div>
-
-    <!-- 爆擊與防禦 -->
-    <div class="section-title"><span>爆擊 / 防禦 / 攻速</span></div>
-    <div class="exp-grid">
-      <div class="exp-field">
-        <label>爆擊機率 (%)</label>
-        <input type="number" id="dpmCritRate" value="15">
-      </div>
-      <div class="exp-field">
-        <label>爆傷（額外傷害 %）</label>
-        <input type="number" id="dpmCritDmg" value="140">
-      </div>
-      <div class="exp-field">
-        <label>怪物防禦</label>
-        <input type="number" id="dpmDefense" value="1200">
-      </div>
-      <div class="exp-field">
-        <label>扣防禦技能</label>
-        <select id="dpmDefReduce">
-          <option value="0">無 (0%)</option>
-          <option value="30">30%</option>
-          <option value="20">20%</option>
-          <option value="10">10%</option>
-          <option value="5">5%</option>
-        </select>
-      </div>
-      <div class="exp-field" style="grid-column: 1 / -1;">
-        <label>技能（依 Ayumilove 攻速表自動帶入延遲）</label>
-        <select id="dpmSkillSpeed"></select>
-        <div style="margin-top:6px; display:flex; gap:6px; align-items:center;">
-          <button type="button" class="btn-sm btn-danger" id="btnDelSkill" style="padding:4px 10px; font-size:12px;">刪除目前選中技能</button>
-          <span style="font-size:12px; color:#666;">（刪除後會記住，重新整理仍有效）</span>
-        </div>
-      </div>
-      <div class="exp-field">
-        <label>攻速檔位</label>
-        <select id="dpmSpeedStage">
-          <option value="2">更快 (2)</option>
-          <option value="3">更快 (3)</option>
-          <option value="4">快 (4)</option>
-          <option value="5">快 (5)</option>
-          <option value="6">普通 (6)</option>
-          <option value="7">慢 (7)</option>
-          <option value="8">慢 (8)</option>
-          <option value="9">比較慢 (9)</option>
-        </select>
-      </div>
-      <div class="exp-field">
-        <label>技能攻速 (ms)（自動計算）</label>
-        <input type="number" id="dpmAtkSpeed" value="600" readonly style="background:#f0f0f0;">
-      </div>
-      <div class="exp-field">
-        <label>每分鐘命中次數</label>
-        <input type="number" id="dpmHits" value="100">
-      </div>
-    </div>
-
-    <!-- 結果 -->
-    <div class="card-result">
-      <div class="result-row"><span>表攻 (小) ~ (大)：</span><span id="dpmRange" style="font-weight:bold; color:#1f497d;">-</span></div>
-      <div class="result-row"><span>DPS（秒輸出）：</span><span id="dpmDps" style="font-weight:bold;">-</span></div>
-      <div class="result-row profit"><span>DPM（分輸出）：</span><span id="dpmResult" style="color:#c55a11;">-</span></div>
-      <div class="result-row"><span>攻屬比（每 1 攻 ≈ 多少主屬）：</span><span id="dpmRatio">-</span></div>
-    </div>
-
-    <div style="margin-top:12px; font-size:12px; color:#666; background:rgba(255,255,255,0.7); padding:10px; border-radius:8px;">
-      <strong>說明：</strong> 終傷下拉可多選疊加；黑暗力量等特殊 BUFF 請依實際遊戲倍率調整數字。防禦採除算近似。特殊技能（槍連擊最小傷 ×1.6 等）尚未完整內建。
-    </div>
-  </div>
-
-<div id="tabContent-settings" class="tab-content">
+  <div id="tabContent-settings" class="tab-content">
     <div id="settingsLoginBox" style="background:rgba(255,255,255,0.95); padding:30px 20px; border-radius:12px; text-align:center; max-width:360px; margin:40px auto;">
       <div style="font-size:18px; font-weight:bold; color:#c55a11; margin-bottom:12px;">🔒 管理員模式</div>
       <input type="password" id="settingsPassword" placeholder="請輸入密碼" style="width:100%; padding:10px; margin-bottom:12px; border-radius:6px; border:1px solid #ccc;">
@@ -1476,6 +1303,82 @@ window.addEventListener('load', function() {
     renderDropItemsForActiveTab();
   };
 
+  // Artale 經驗表（升到下一級所需經驗，index = 等級）
+  const ARTALE_EXP = [
+    0, 15, 34, 57, 92, 135, 372, 560, 840, 1242, 1716, 2360, 3216, 4200, 5460, 7050,
+    8840, 11040, 13716, 16680, 20216, 24402, 28980, 34320, 40512, 47216, 54900, 63666,
+    73080, 83720, 95700, 108480, 122760, 138666, 155540, 174216, 194832, 216600, 240500,
+    266682, 294216, 324240, 356916, 391160, 428280, 468450, 510420, 555680, 604416, 655200,
+    709716, 748608, 789631, 832902, 878545, 926689, 977471, 1031036, 1087536, 1147132,
+    1209994, 1276301, 1346242, 1420016, 1497832, 1579913, 1666492, 1757815, 1854143,
+    1955750, 2062925, 2175973, 2295216, 2420993, 2553663, 2693603, 2841212, 2996910,
+    3161140, 3334370, 3517093, 3709829, 3913127, 4127566, 4353756, 4592341, 4844001,
+    5109452, 5389449, 5684790, 5996316, 6324914, 6671519, 7037118, 7422752, 7829518,
+    8258575, 8711144, 9188514, 9692044, 10223168, 10783397, 11374327, 11997640, 12655110,
+    13348610, 14080113, 14851703, 15665576, 16524049, 17429566, 18384706, 19392187,
+    20454878, 21575805, 22758159, 24005306, 25320796, 26708375, 28171993, 29715818,
+    31344244, 33061908, 34873700, 36784778, 38800583, 40926854, 43169645, 45535341,
+    48030677, 50662758, 53439077, 56367538, 59456479, 62714694, 66151459, 69776558,
+    73600313, 77633610, 81887931, 86375389, 91108760, 96101520, 101367883, 106922842,
+    112782213, 118962678, 125481832, 132358236, 139611467, 147262175, 155332142, 163844343,
+    172823012, 182293713, 192283408, 202820538, 213935103, 225658746, 238024845, 251068606,
+    264827165, 279339693, 294647508, 310794191, 327825712, 345790561, 364739883, 384727628,
+    405810702, 428049128, 451506220, 476248760, 502347192, 529875818, 558913012, 589541445,
+    621848316, 655925603, 691870326, 729784819, 769777027, 811960808, 856456260, 903390063,
+    952895838, 1005114529, 1060194805, 1118293480, 1179575962, 1244216724, 1312399800,
+    1384319309, 1460180007, 1540197871, 1624600714, 1713628833, 1807535693, 1906588648,
+    2011069705, 2121276324
+  ];
+
+  function calcArtaleLevel() {
+    const level = Math.max(1, Math.min(200, parseInt(document.getElementById('artaleLevel').value) || 1));
+    const currentExp = parseNumber(document.getElementById('artaleExp').value);
+    const targetLevel = parseInt(document.getElementById('artaleTargetLevel').value) || 0;
+
+    const needNext = ARTALE_EXP[level] || 0;
+    const remainNext = Math.max(0, needNext - currentExp);
+
+    document.getElementById('artaleNeedNext').innerText = formatNumber(remainNext);
+
+    // 從目前每小時經驗估算時間
+    const exp1hText = document.getElementById('resExp1h').innerText.replace(/,/g, '');
+    const expPerHour = parseNumber(exp1hText) || 0;
+
+    if (expPerHour > 0 && remainNext > 0) {
+      const hoursNext = remainNext / expPerHour;
+      const h = Math.floor(hoursNext);
+      const m = Math.round((hoursNext - h) * 60);
+      document.getElementById('artaleTimeNext').innerText = h > 0 ? `${h} 小時 ${m} 分鐘` : `${m} 分鐘`;
+    } else {
+      document.getElementById('artaleTimeNext').innerText = expPerHour > 0 ? '已達標' : '請先測量每小時經驗';
+    }
+
+    if (targetLevel > level && targetLevel <= 200) {
+      let totalNeed = remainNext;
+      for (let lv = level + 1; lv < targetLevel; lv++) {
+        totalNeed += ARTALE_EXP[lv] || 0;
+      }
+      document.getElementById('artaleNeedTarget').innerText = formatNumber(totalNeed);
+      if (expPerHour > 0) {
+        const hours = totalNeed / expPerHour;
+        const h = Math.floor(hours);
+        const m = Math.round((hours - h) * 60);
+        document.getElementById('artaleTimeTarget').innerText = h > 0 ? `${h} 小時 ${m} 分鐘` : `${m} 分鐘`;
+      } else {
+        document.getElementById('artaleTimeTarget').innerText = '請先測量每小時經驗';
+      }
+    } else {
+      document.getElementById('artaleNeedTarget').innerText = '-';
+      document.getElementById('artaleTimeTarget').innerText = '-';
+    }
+  }
+
+  // 綁定 Artale 計算
+  ['artaleLevel', 'artaleExp', 'artaleTargetLevel'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.oninput = calcArtaleLevel;
+  });
+
   function calculateExpEfficiency() {
     const tab = localExpData.expTabs[localExpData.activeExpTabIdx];
     if (!tab) return;
@@ -1526,6 +1429,13 @@ window.addEventListener('load', function() {
     document.getElementById('resExp1h').innerText = formatNumber(exp1h);
     document.getElementById('resMesos1h').innerText = formatNumber(mesos1h) + ' 楓幣';
   }
+
+  // 包裝：效率計算完後同步更新 Artale 等級估算
+  const _origCalcExp = calculateExpEfficiency;
+  calculateExpEfficiency = function() {
+    _origCalcExp();
+    if (document.getElementById('artaleLevel')) calcArtaleLevel();
+  };
 
   document.querySelectorAll('#tabContent-exp input').forEach(input => {
     input.oninput = function() {
@@ -2306,297 +2216,6 @@ window.addEventListener('load', function() {
   }
 
 });
-
-  // ========== DPM 傷害計算機 ==========
-
-  
-  // 技能延遲表（可自行刪除）
-  const DEFAULT_SKILLS = {
-    "魔天一擊/劍氣縱橫/龍之獻祭/普攻": {2:570, 3:630, 4:660, 5:720, 6:750, 7:810, 8:870, 9:900},
-    "終極攻擊平均(槍/矛)": {2:822, 3:882, 4:948, 5:1008, 6:1074, 7:1134, 8:1230, 9:1278},
-    "槍/矛連擊": {2:810, 3:870, 4:930, 5:990, 6:1050, 7:1140, 8:1200, 9:1260},
-    "槍/矛無雙": {2:600, 3:660, 4:720, 5:750, 6:810, 7:870, 8:900, 9:960},
-    "龍咆哮": {2:1140, 3:1230, 4:1320, 5:1410, 6:1500, 7:1620, 8:1710, 9:1800},
-    "突刺(冷卻)": {2:1770, 3:1770, 4:1770, 5:1770, 6:1770, 7:1770, 8:1770, 9:1770},
-    "突刺": {2:500, 3:500, 4:500, 5:500, 6:500, 7:500, 8:500, 9:500},
-    "魔天一擊/劍氣縱橫/屬性攻擊/普通攻擊": {2:600, 3:660, 4:720, 5:750, 6:810, 7:870, 8:900},
-    "終極攻擊平均(劍斧棍)": {2:780, 3:852, 4:924, 5:960, 6:1032, 7:1080, 8:1140},
-    "無雙劍舞/騎士衝擊波": {2:630, 3:690, 4:750, 5:810, 6:840, 7:900, 8:960},
-    "鬼神之擊": {2:2600, 3:2600, 4:2600, 5:2600, 6:2600, 7:2600, 8:2600, 9:2600},
-    "暴風神射（每箭）": {2:120, 3:120, 4:120, 5:120, 6:120, 7:120, 8:120, 9:120},
-    "終極攻擊(弓)": {2:834, 3:894, 4:972, 5:1020, 6:1098},
-    "四連箭/箭雨/烈焰箭/炸彈箭/普攻": {2:600, 3:660, 4:720, 5:750, 6:810},
-    "終極攻擊(弩)": {2:954, 3:1050, 4:1110, 5:1194, 6:1284},
-    "四連箭/昇龍弩/寒冰箭/穿透之箭/必殺狙擊/普攻": {2:630, 3:690, 4:750, 5:780, 6:870},
-    "光速神弩": {2:780, 3:800, 4:830, 5:860, 6:890},
-    "老鷹/鳳凰召喚": {2:3000, 3:3000, 4:3000, 5:3000, 6:3000},
-    "雙飛斬/三飛閃/吸血術/楓幣攻擊/普攻": {2:600, 3:660, 4:720, 5:750, 6:810},
-    "風魔手裏劍": {2:630, 3:690, 4:750, 5:810, 6:840},
-    "吸血術": {2:1020, 3:1110, 4:1200, 5:1290, 6:1350},
-    "挑釁": {2:1020, 3:1110, 4:1200, 5:1290, 6:1350},
-    "忍術風影(冷卻)": {2:1440, 3:1440, 4:1440, 5:1440, 6:1440},
-    "忍術風影": {2:720, 3:780, 4:840, 5:900, 6:930},
-    "迴旋斬/瞬步連擊": {2:720, 3:780, 4:840, 5:900},
-    "落葉斬": {2:900, 3:990, 4:1050, 5:1140},
-    "分身術/妙手術/劈空斬/普攻": {2:600, 3:660, 4:720, 5:750},
-    "楓幣炸彈": {2:750, 3:840, 4:900, 5:960},
-    "致命暗殺": {2:1715, 3:1740, 4:1765},
-    "普攻(火槍)": {2:630, 3:690, 4:750, 5:780, 6:810},
-    "雙子星攻擊": {2:370, 3:400, 4:420, 5:450},
-    "加農砲/三連發": {2:600, 3:630, 4:690, 5:750, 6:780},
-    "偽裝射擊": {2:660, 3:690, 4:750, 5:810, 6:840},
-    "散射": {2:630, 3:660, 4:720, 5:750, 6:810},
-    "海盜魚雷": {2:720, 3:780, 4:840, 5:900, 6:960},
-    "指定攻擊": {2:600, 3:600, 4:600, 5:600, 6:600},
-    "迅雷（每發）": {2:120, 3:120, 4:120, 5:120, 6:120},
-    "脫離戰場(冷卻)": {2:2310, 3:2310, 4:2310, 5:2310, 6:2310},
-    "脫離戰場": {2:300, 3:300, 4:300, 5:300, 6:300},
-    "火焰噴射/寒冰噴射(冷卻)": {2:1050, 3:1050, 4:1050, 5:1050, 6:1050},
-    "火焰噴射/寒冰噴射": {2:480, 3:540, 4:570, 5:600, 6:630},
-    "海鷗特戰隊": {2:2160, 3:2340, 4:2520, 5:2700, 6:2880},
-    "砲台章魚": {2:1579, 3:1579, 4:1579, 5:1579, 6:1579},
-    "砲台章魚王": {2:800, 3:800, 4:800, 5:800, 6:800},
-    "普攻(指虎)": {2:600, 3:660, 4:720, 5:750, 6:810},
-    "衝擊拳": {2:460, 3:510, 4:540, 5:570, 6:600},
-    "旋風斬": {2:600, 3:600, 4:600, 5:600, 6:600},
-    "狂暴衝擊(冷卻)": {2:1530, 3:1530, 4:1530, 5:1530, 6:1530},
-    "狂暴衝擊": {2:600, 3:630},
-    "迴旋肘擊": {2:720, 3:780, 4:840, 5:900, 6:960},
-    "迴旋肘擊冷卻": {2:1980, 3:1980, 4:1980, 5:1980, 6:1980},
-    "昇龍拳冷卻": {2:1765, 3:1765, 4:1765, 5:1765, 6:1765},
-    "閃連殺": {2:1830, 3:1980, 4:2130, 5:2280, 6:2430},
-    "昇龍拳": {2:900, 3:960, 4:1050, 5:1110, 6:1170},
-    "衝擊波": {2:1500, 3:1620, 4:1740, 5:1860, 6:1980},
-    "魔龍降臨": {2:1080, 3:1170, 4:1260, 5:1350, 6:1440},
-    "閃索命": {2:600, 3:660, 4:720, 5:750},
-    "閃爆破": {2:2000, 3:2069, 4:2140, 5:2220},
-    "自訂": null
-  };
-
-  let SKILL_DELAY = JSON.parse(localStorage.getItem('dpm_skills')) || JSON.parse(JSON.stringify(DEFAULT_SKILLS));
-
-  function saveSkills() {
-    localStorage.setItem('dpm_skills', JSON.stringify(SKILL_DELAY));
-  }
-
-  function renderSkillSelect() {
-    const sel = document.getElementById('dpmSkillSpeed');
-    if (!sel) return;
-    const current = sel.value;
-    sel.innerHTML = '';
-    Object.keys(SKILL_DELAY).forEach(name => {
-      const opt = document.createElement('option');
-      opt.value = name;
-      opt.textContent = name;
-      sel.appendChild(opt);
-    });
-    if (current && SKILL_DELAY[current]) sel.value = current;
-    else sel.value = Object.keys(SKILL_DELAY)[0] || '';
-  }
-
-  function deleteCurrentSkill() {
-    const sel = document.getElementById('dpmSkillSpeed');
-    if (!sel || !sel.value) return;
-    const name = sel.value;
-    if (name === '自訂') { alert('自訂項目不可刪除'); return; }
-    if (confirm('確定刪除「' + name + '」嗎？')) {
-      delete SKILL_DELAY[name];
-      saveSkills();
-      renderSkillSelect();
-      applySkillSpeed();
-      calcDPM();
-    }
-  }
-
-  // 舊版相容用（保留空物件避免報錯）
-  const _unused = {
-    normal:       {2:600, 3:660, 4:720, 5:750, 6:810},
-    wushuang:     {2:600, 3:660, 4:720, 5:750, 6:810}, // 近似一般技能
-    power:        {2:570, 3:630, 4:660, 5:720, 6:750},
-    qiang_mao:   {2:600, 3:660, 4:720, 5:750, 6:810}, // 槍/矛無雙
-    qiang_lian:  {2:810, 3:870, 4:930, 5:990, 6:1050}, // 槍連擊
-    longpao:     {2:600, 3:660, 4:720, 5:750, 6:810}, // 龍咆/鬼神近似
-    fengmo:       {2:600, 3:660, 4:720, 5:750, 6:810},
-    sanfei:       {2:600, 3:660, 4:720, 5:750, 6:810},
-    shuangfei:  {2:600, 3:660, 4:720, 5:750, 6:810},
-    silian:       {2:600, 3:660, 4:720, 5:750, 6:810},
-    hurricane:    {2:120, 3:120, 4:120, 5:120, 6:120}, // 每箭固定
-    xunlei:        {2:120, 3:120, 4:120, 5:120, 6:120},
-    summon:       {2:3000, 3:3000, 4:3000, 5:3000, 6:3000},
-    custom:       null
-  };
-
-  function applySkillSpeed() {
-    const skillSel = document.getElementById('dpmSkillSpeed');
-    const stageSel = document.getElementById('dpmSpeedStage');
-    const msInput = document.getElementById('dpmAtkSpeed');
-    if (!skillSel || !stageSel || !msInput) return;
-
-    const skill = skillSel.value;
-    const stage = stageSel.value;
-    if (skill === '自訂' || !SKILL_DELAY[skill]) {
-      msInput.readOnly = false;
-      msInput.style.background = '#fff';
-      return;
-    }
-    msInput.readOnly = true;
-    msInput.style.background = '#f0f0f0';
-    const ms = (SKILL_DELAY[skill] && SKILL_DELAY[skill][stage]) || 650;
-    msInput.value = ms;
-  }
-function applySpeedPreset() {
-    const sel = document.getElementById('dpmSpeedPreset');
-    const msInput = document.getElementById('dpmAtkSpeed');
-    if (!sel || !msInput) return;
-    if (sel.value !== 'custom') {
-      msInput.value = sel.value;
-      msInput.dataset.manual = '';
-    }
-  }
-  function updatePrimaryFromStats() {
-    const weapon = document.getElementById('dpmWeapon');
-    if (!weapon) return;
-    const parts = weapon.value.split(',');
-    const mainStat = parts[2] || 'str';
-    const secStat = parts[3] || 'dex';
-    const str = Number(document.getElementById('dpmStr')?.value) || 0;
-    const dex = Number(document.getElementById('dpmDex')?.value) || 0;
-    const luk = Number(document.getElementById('dpmLuk')?.value) || 0;
-
-    const statMap = { str: str, dex: dex, luk: luk };
-    const primary = statMap[mainStat] || str;
-    const secondary = statMap[secStat] || dex;
-
-    const primaryInput = document.getElementById('dpmPrimary');
-    if (primaryInput && !primaryInput.dataset.manual) primaryInput.value = primary;
-    const secInput = document.getElementById('dpmSecondary');
-    if (secInput && !secInput.dataset.manual) secInput.value = secondary;
-  }
-
-  function updateTotalAtt() {
-    const w = Number(document.getElementById('dpmWeaponAtt')?.value) || 0;
-    const e = Number(document.getElementById('dpmExtraAtt')?.value) || 0;
-    const t = document.getElementById('dpmTotalAtt');
-    if (t) t.value = w + e;
-  }
-
-  function applySkillPreset() {
-    const sel = document.getElementById('dpmSkillPreset');
-    const skill = document.getElementById('dpmSkill');
-    const hits = document.getElementById('dpmSkillHits');
-    if (!sel || !skill) return;
-    if (sel.value === 'custom') return;
-    const [pct, hitCount] = sel.value.split('|');
-    skill.value = pct || 100;
-    if (hits && hitCount) hits.value = hitCount;
-  }
-
-  function applyFinalPreset() {
-    const sel = document.getElementById('dpmFinalPreset');
-    const out = document.getElementById('dpmFinalDmg');
-    const weak = document.getElementById('dpmWeakness');
-    if (!sel || !out) return;
-    let mult = 1;
-    for (const opt of sel.selectedOptions) {
-      mult *= Number(opt.value) / 100;
-    }
-    if (weak && weak.checked) mult *= 1.5;
-    out.value = Math.round(mult * 100);
-  }
-
-  function calcDPM() {
-    updatePrimaryFromStats();
-    updateTotalAtt();
-
-    const primary = Number(document.getElementById('dpmPrimary')?.value) || 0;
-    const secondary = Number(document.getElementById('dpmSecondary')?.value) || 0;
-    const attack = Number(document.getElementById('dpmTotalAtt')?.value) || 0;
-    const mastery = (Number(document.getElementById('dpmMastery')?.value) || 0) / 100;
-    const weaponVal = document.getElementById('dpmWeapon')?.value || "4.2,4.2,str";
-    const [maxC, minC] = weaponVal.split(',').map(Number);
-    const skillPct = (Number(document.getElementById('dpmSkill')?.value) || 100) / 100;
-    const skillHits = Math.max(1, Number(document.getElementById('dpmSkillHits')?.value) || 1);
-    const atkSpeed = Number(document.getElementById('dpmAtkSpeed')?.value) || 650;
-    const hits = Math.floor(60000 / atkSpeed) || 1;
-    const hitsInput = document.getElementById('dpmHits');
-    if (hitsInput && !hitsInput.dataset.manual) hitsInput.value = hits;
-
-    const critRate = (Number(document.getElementById('dpmCritRate')?.value) || 0) / 100;
-    const critDmg = (Number(document.getElementById('dpmCritDmg')?.value) || 0) / 100;
-    const finalDmg = (Number(document.getElementById('dpmFinalDmg')?.value) || 100) / 100;
-    const rangeAmp = (Number(document.getElementById('dpmRangeAmp')?.value) || 100) / 100;
-    const rawDefense = Number(document.getElementById('dpmDefense')?.value) || 0;
-    const defReducePct = Number(document.getElementById('dpmDefReduce')?.value) || 0;
-    const defense = Math.floor(rawDefense * (1 - defReducePct / 100));
-
-    const maxRange = Math.floor((primary * maxC + secondary) * attack / 100 * rangeAmp);
-    let minRange = Math.floor((primary * minC * 0.9 * mastery + secondary) * attack / 100 * rangeAmp);
-
-    // 槍連擊特殊：表攻小傷 ×1.6
-    const skillPreset = document.getElementById('dpmSkillPreset');
-    const isQiangLian = skillPreset && skillPreset.value.startsWith('170|3');
-    if (isQiangLian) {
-      minRange = Math.floor(minRange * 1.6);
-    }
-
-    let maxBase = maxRange * skillPct * finalDmg;
-    let minBase = minRange * skillPct * finalDmg;
-
-    const defFactor = 100 / (defense + 100);
-    maxBase *= defFactor;
-    minBase *= defFactor;
-
-    const maxDmg = Math.floor(maxBase);
-    const minDmg = Math.floor(minBase);
-    const maxCrit = Math.floor(maxDmg * (1 + critDmg));
-    const minCrit = Math.floor(minDmg * (1 + critDmg));
-
-    const avg = ((minDmg + maxDmg) / 2) * (1 - critRate) + ((minCrit + maxCrit) / 2) * critRate;
-    const dps = Math.floor(avg * (1000 / atkSpeed) * skillHits);
-    const dpm = Math.floor(avg * hits * skillHits);
-    const ratio = attack > 0 ? (primary / attack).toFixed(2) : '-';
-
-    const set = (id, text) => { const el = document.getElementById(id); if (el) el.innerText = text; };
-    set('dpmRange', minRange.toLocaleString() + ' ~ ' + maxRange.toLocaleString());
-    set('dpmSkillDmg', minDmg.toLocaleString() + ' ~ ' + maxDmg.toLocaleString());
-    set('dpmCritDmgRange', minCrit.toLocaleString() + ' ~ ' + maxCrit.toLocaleString());
-    set('dpmAvg', Math.floor(avg).toLocaleString());
-    set('dpmDps', dps.toLocaleString());
-    set('dpmResult', dpm.toLocaleString());
-    set('dpmRatio', ratio);
-  }
-
-  setTimeout(() => {
-    const skillPreset = document.getElementById('dpmSkillPreset');
-    if (skillPreset) skillPreset.addEventListener('change', () => { applySkillPreset(); calcDPM(); });
-    renderSkillSelect();
-    const delBtn = document.getElementById('btnDelSkill');
-    if (delBtn) delBtn.onclick = deleteCurrentSkill;
-
-    const skillSpeed = document.getElementById('dpmSkillSpeed');
-    const speedStage = document.getElementById('dpmSpeedStage');
-    if (skillSpeed) skillSpeed.addEventListener('change', () => { applySkillSpeed(); calcDPM(); });
-    if (speedStage) speedStage.addEventListener('change', () => { applySkillSpeed(); calcDPM(); });
-    const finalPreset = document.getElementById('dpmFinalPreset');
-    if (finalPreset) finalPreset.addEventListener('change', () => { applyFinalPreset(); calcDPM(); });
-    const weakness = document.getElementById('dpmWeakness');
-    if (weakness) weakness.addEventListener('change', () => { applyFinalPreset(); calcDPM(); });
-
-    document.querySelectorAll('#tabContent-dpm input, #tabContent-dpm select').forEach(el => {
-      el.addEventListener('input', calcDPM);
-      el.addEventListener('change', calcDPM);
-    });
-
-    // 允許手動覆寫主屬 / 命中次數
-    ['dpmPrimary','dpmSecondary','dpmHits'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.addEventListener('input', () => { el.dataset.manual = '1'; });
-    });
-
-    calcDPM();
-  }, 500);
-
-
 </script>
 
 </body>
