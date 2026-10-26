@@ -368,13 +368,23 @@
 
     <div class="section-title"><span>📈 2. 經驗值與楓幣統計</span></div>
     <div class="exp-grid">
+      <div class="exp-field" style="grid-column: 1 / -1;">
+        <label>目前等級（用於 % 模式換算）：</label>
+        <input type="number" id="expLevel" value="1" min="1" max="200" style="font-weight:bold; width:120px;">
+      </div>
       <div class="exp-field">
         <label>開始經驗值：</label>
-        <input type="text" id="expStart" class="comma-input" value="0">
+        <div style="display:flex; gap:6px; align-items:center;">
+          <input type="text" id="expStart" class="comma-input" value="0" style="flex:1;">
+          <button type="button" class="btn-sm btn-secondary btn-exp-percent" data-target="expStart" style="white-space:nowrap;">% 模式</button>
+        </div>
       </div>
       <div class="exp-field">
         <label>結束經驗值：</label>
-        <input type="text" id="expEnd" class="comma-input" value="0">
+        <div style="display:flex; gap:6px; align-items:center;">
+          <input type="text" id="expEnd" class="comma-input" value="0" style="flex:1;">
+          <button type="button" class="btn-sm btn-secondary btn-exp-percent" data-target="expEnd" style="white-space:nowrap;">% 模式</button>
+        </div>
       </div>
       <div class="exp-field">
         <label>開始楓幣：</label>
@@ -384,6 +394,9 @@
         <label>結束楓幣 (自身獲得楓幣)：</label>
         <input type="text" id="mesosEnd" class="comma-input" value="0">
       </div>
+    </div>
+    <div style="font-size:12px; color:#555; margin: -6px 0 12px; background:rgba(255,255,255,0.75); padding:6px 12px; border-radius:6px; border:1px dashed #ccc;">
+      💡 先填「目前等級」，再在經驗欄輸入百分比（可到小數點後兩位，例如 55.25）後按「% 模式」即可換算。
     </div>
 
     <div class="section-title">
@@ -1377,7 +1390,28 @@ window.addEventListener('load', function() {
     }
   }
 
-  // 百分比換算（按鈕專用）
+  // 上方經驗值 % 模式（依 Artale 目前等級換算）
+  document.querySelectorAll('.btn-exp-percent').forEach(btn => {
+    btn.onclick = function() {
+      const targetId = this.getAttribute('data-target');
+      const input = document.getElementById(targetId);
+      const level = Math.max(1, Math.min(200, parseInt(document.getElementById('expLevel').value) || 1));
+      let raw = input.value.trim().replace(/%/g, '');
+      const percent = Math.max(0, Math.min(100, parseFloat(raw) || 0));
+      const need = ARTALE_EXP[level] || 0;
+      if (!need) {
+        alert('請先填寫上方的目前等級');
+        return;
+      }
+      // 支援小數點後兩位
+      const exp = Math.round(need * percent / 100 * 100) / 100;
+      input.value = formatNumber(Math.round(exp));
+      syncExpFormToData();
+      calculateExpEfficiency();
+    };
+  });
+
+  // 百分比換算（Artale 區塊按鈕）
   document.getElementById('btnArtalePercent').onclick = function() {
     const level = Math.max(1, Math.min(200, parseInt(document.getElementById('artaleLevel').value) || 1));
     const input = document.getElementById('artaleExp');
@@ -1388,8 +1422,8 @@ window.addEventListener('load', function() {
       alert('請先輸入有效等級');
       return;
     }
-    const exp = Math.round(need * percent / 100);
-    input.value = formatNumber(exp);
+    const exp = Math.round(need * percent / 100 * 100) / 100;
+    input.value = formatNumber(Math.round(exp));
     calcArtaleLevel();
   };
 
