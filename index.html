@@ -469,7 +469,7 @@
           <input type="text" id="artaleExp" class="comma-input" value="0" placeholder="例如：50000 或 75%" style="flex:1;">
           <button type="button" id="btnArtalePercent" class="btn-sm btn-secondary" style="white-space:nowrap;">% 模式</button>
         </div>
-        <div style="font-size:11px; color:#666; margin-top:3px;">可直接輸入數字，或輸入百分比（例如 75%）後按「% 模式」換算</div>
+        <div style="font-size:11px; color:#666; margin-top:3px;">輸入百分比數字（例如 55）後按「% 模式」自動換算成實際經驗</div>
       </div>
       <div class="exp-field">
         <label>目標等級（選填）：</label>
@@ -1377,38 +1377,26 @@ window.addEventListener('load', function() {
     }
   }
 
-  // 百分比換算
+  // 百分比換算（按鈕專用）
   document.getElementById('btnArtalePercent').onclick = function() {
     const level = Math.max(1, Math.min(200, parseInt(document.getElementById('artaleLevel').value) || 1));
-    const raw = document.getElementById('artaleExp').value.trim();
+    const input = document.getElementById('artaleExp');
+    let raw = input.value.trim().replace(/%/g, '');
+    const percent = Math.max(0, Math.min(100, parseFloat(raw) || 0));
     const need = ARTALE_EXP[level] || 0;
-    if (!need) return;
-
-    let percent = 0;
-    if (raw.endsWith('%')) {
-      percent = parseFloat(raw.replace('%', '')) || 0;
-    } else {
-      percent = parseFloat(raw) || 0;
+    if (!need) {
+      alert('請先輸入有效等級');
+      return;
     }
-    percent = Math.max(0, Math.min(100, percent));
     const exp = Math.round(need * percent / 100);
-    document.getElementById('artaleExp').value = formatNumber(exp);
+    input.value = formatNumber(exp);
     calcArtaleLevel();
   };
 
-  // 綁定 Artale 計算
+  // 綁定 Artale 計算（一般輸入）
   ['artaleLevel', 'artaleExp', 'artaleTargetLevel'].forEach(id => {
     const el = document.getElementById(id);
-    if (el) {
-      el.oninput = function() {
-        if (id === 'artaleExp' && this.value.trim().endsWith('%')) {
-          // 自動換算
-          document.getElementById('btnArtalePercent').click();
-        } else {
-          calcArtaleLevel();
-        }
-      };
-    }
+    if (el) el.oninput = calcArtaleLevel;
   });
 
   function calculateExpEfficiency() {
